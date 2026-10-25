@@ -20,6 +20,7 @@ VALVE_1 = "input_boolean.valve_1"
 VALVE_2 = "input_boolean.valve_2"
 SOIL = "sensor.soil"
 RAIN = "sensor.rain"
+METER = "sensor.meter"
 
 
 @pytest.fixture
@@ -39,17 +40,20 @@ def notifications(hass: HomeAssistant):
     return async_mock_service(hass, "notify", "phone")
 
 
-async def run_wizard(hass: HomeAssistant, valves=(VALVE_1, VALVE_2)) -> config_entries.ConfigEntry:
+async def run_wizard(
+    hass: HomeAssistant, valves=(VALVE_1, VALVE_2), meter: str | None = None, duration: float = 1
+) -> config_entries.ConfigEntry:
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
     assert result["type"] is FlowResultType.FORM
     result = await hass.config_entries.flow.async_configure(result["flow_id"], {"name": "Garden"})
     assert result["step_id"] == "weather"
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {"soil_sensor": SOIL, "rain_sensor": RAIN}
+        result["flow_id"], {"soil_sensor": SOIL, "rain_sensor": RAIN, **({"water_meter": meter} if meter else {})}
     )
     assert result["step_id"] == "zone"
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {"name": "Lawn", "valves": list(valves), "roofed": False, "interval": 3, "duration": 1}
+        result["flow_id"],
+        {"name": "Lawn", "valves": list(valves), "roofed": False, "interval": 3, "duration": duration},
     )
     assert result["type"] is FlowResultType.MENU
     result = await hass.config_entries.flow.async_configure(result["flow_id"], {"next_step_id": "finish"})
@@ -69,10 +73,12 @@ def entity_id(hass: HomeAssistant, platform: str, unique_suffix: str) -> str:
     raise AssertionError(f"no {platform} entity ending with {unique_suffix}")
 
 
-async def advance(hass: HomeAssistant, freezer, seconds: int, step: int = 5) -> None:
-    """Move the clock forward while the run task polls its valves."""
+async def advance(hass: HomeAssistant, freezer, seconds: int, step: int = 5, on_tick=None) -> None:
+    """Move the clock forward while the run task polls its valves; on_tick runs after every step."""
     for _ in range(seconds // step):
         freezer.tick(timedelta(seconds=step))
+        if on_tick is not None:
+            on_tick()
         for _ in range(5):
             await asyncio.sleep(0)
     await hass.async_block_till_done()
@@ -344,3 +350,82 @@ async def test_manual_times_run_given_valves_without_booking_a_short_run(
     # 1 of the zone's 2 minutes: the zone stays due.
     assert hass.states.get(entity_id(hass, "date", "_last_watered")).state == "unknown"
     assert entry.runtime_data.log[-1]["zones"][0]["planned_min"] == 1.0
+
+
+class Meter:
+    """Water meter in m³ that runs at a given flow while any valve is on, reported on every tick."""
+
+    def __init__(self, hass: HomeAssistant, flow_l_min: float, step: int = 5) -> None:
+        self.hass = hass
+        self.flow = flow_l_min
+        self.step = step
+        self.liters = 17927.0
+        self.report()
+
+    def report(self) -> None:
+        self.hass.states.async_set(
+            METER,
+            f"{self.liters / 1000:.3f}",
+            {"unit_of_measurement": "m³", "device_class": "water"},
+            force_update=True,
+        )
+
+    def __call__(self) -> None:
+        if any(self.hass.states.get(valve).state == "on" for valve in (VALVE_1, VALVE_2)):
+            self.liters += self.flow * self.step / 60
+        self.report()
+
+
+async def start_zone(hass: HomeAssistant) -> None:
+    await hass.services.async_call(
+        "switch", "turn_on", {"entity_id": entity_id(hass, "switch", "_control")}, blocking=True
+    )
+    await hass.services.async_call(
+        "button", "press", {"entity_id": entity_id(hass, "button", "_run_due")}, blocking=True
+    )
+
+
+async def test_metered_run_books_litres_per_valve_and_zone(hass: HomeAssistant, garden, freezer) -> None:
+    meter = Meter(hass, flow_l_min=6.0)
+    entry = await run_wizard(hass, meter=METER)
+    await start_zone(hass)
+    await advance(hass, freezer, 220, on_tick=meter)
+    assert hass.states.get(entity_id(hass, "binary_sensor", "_running")).state == "off"
+    [zone] = entry.runtime_data.log[-1]["zones"]
+    assert zone["watered"]
+    assert [valve["entity_id"] for valve in zone["valves"]] == [VALVE_1, VALVE_2]
+    for valve in zone["valves"]:
+        assert valve["liters"] == pytest.approx(6.0, abs=1.0)
+        assert valve["flow"] == pytest.approx(6.0, abs=1.0)
+    assert float(hass.states.get(entity_id(hass, "sensor", "_water_used")).state) == pytest.approx(12.0, abs=1.5)
+
+
+async def test_valve_without_water_is_reported_and_not_counted(
+    hass: HomeAssistant, garden, notifications, freezer
+) -> None:
+    meter = Meter(hass, flow_l_min=0.0)
+    entry = await run_wizard(hass, valves=(VALVE_1,), meter=METER, duration=3)
+    await start_zone(hass)
+    await advance(hass, freezer, 300, on_tick=meter)
+    [zone] = entry.runtime_data.log[-1]["zones"]
+    assert zone["valves"][0]["no_flow"]
+    assert not zone["watered"]
+    assert hass.states.get(entity_id(hass, "date", "_last_watered")).state == "unknown"
+    assert ir.async_get(hass).async_get_issue(DOMAIN, f"{entry.entry_id}_no_flow") is not None
+
+
+async def test_valve_above_its_flow_limit_is_closed(hass: HomeAssistant, garden, notifications, freezer) -> None:
+    meter = Meter(hass, flow_l_min=24.0)
+    entry = await run_wizard(hass, valves=(VALVE_1,), meter=METER, duration=10)
+    await hass.services.async_call(
+        "number", "set_value", {"entity_id": entity_id(hass, "number", "_max_flow_0"), "value": 10}, blocking=True
+    )
+    await start_zone(hass)
+    await advance(hass, freezer, 200, on_tick=meter)
+    assert hass.states.get(VALVE_1).state == "off"
+    await advance(hass, freezer, 70, on_tick=meter)
+    [zone] = entry.runtime_data.log[-1]["zones"]
+    assert zone["valves"][0]["flow_high"]
+    assert zone["valves"][0]["minutes"] < 4
+    assert ir.async_get(hass).async_get_issue(DOMAIN, f"{entry.entry_id}_flow_high") is not None
+    assert "Garden: flow too high" in [call.data["title"] for call in notifications]

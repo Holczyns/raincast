@@ -9,6 +9,8 @@ Rules, checked on every poll of the valve state:
    a manual run after their own preset time.
 4. Once the planned time is reached the valve is stopped and has to
    report closed within CLOSE_TIMEOUT_S.
+5. A run can be ended early, for a fault found outside this class; the
+   valve then has to report closed as in rule 4.
 
 State kept between polls: measured open time, when the valve opened,
 when the last command was sent and how often it was started. The runner
@@ -64,6 +66,13 @@ class ValveRun:
     def remaining_minutes(self) -> int:
         """Whole minutes for controllers that take the run time with the start command."""
         return max(1, math.ceil((self.planned_s - self.ran_s) / 60))
+
+    def abort(self, now: datetime) -> Command:
+        """5. Stop before the planned time; the time watered so far is kept."""
+        self.ran_s = self.watered_s(now)
+        self.open_since = None
+        self.stop_at = now
+        return Command.STOP
 
     def step(self, is_open: bool, now: datetime) -> Command | None:
         """Advance by one poll; returns the command to send, if any."""

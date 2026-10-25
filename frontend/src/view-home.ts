@@ -1,5 +1,5 @@
 import { LitElement, css, html, nothing, type TemplateResult } from "lit";
-import { type EntryInfo, type ZoneInfo, durationEntities, pressButton, runZone } from "./api";
+import { type EntryInfo, type ZoneInfo, durationEntities, latestResult, pressButton, runZone } from "./api";
 import { type HomeAssistant, fireEvent, isOn, numberState } from "./ha";
 import { type Localize, type TranslationKey, dayLabel, formatNumber, timeLabel } from "./localize";
 import { controlStyles } from "./number-control";
@@ -211,6 +211,7 @@ export class RainCastHome extends LitElement {
     const interval = numberState(this.hass, zone.entities.interval);
     const durations = durationEntities(zone);
     const manual = this.manual?.zoneId === zone.id ? this.manual : undefined;
+    const latest = latestResult(this.entry, zone.id);
     return html`
       <section class="card zone ${state === "watering" ? "active" : ""}">
         <h2>
@@ -225,10 +226,12 @@ export class RainCastHome extends LitElement {
           <dd>${this.dateText(next)}</dd>
           <dt>${t("zone.interval")}</dt>
           <dd>${t("zone.every_days", { days: interval ?? "–" })}</dd>
+          ${this.renderWater(zone)}
         </dl>
         <div class="valves">
           ${zone.valves.map((valve, index) => {
             const open = OPEN_STATES.includes(this.hass.states[valve]?.state ?? "");
+            const flow = latest?.valves?.find((item) => item.entity_id === valve)?.flow;
             return html`
               <div class="valve">
                 <span class="dot ${open ? "open" : ""}" title=${this.hass.states[valve]?.state ?? ""}></span>
@@ -249,13 +252,31 @@ export class RainCastHome extends LitElement {
                           };
                         }}
                       /><span class="unit">min</span>`
-                  : html`<span class="muted">${t("zone.minutes", { minutes: formatNumber(numberState(this.hass, durations[index]), 0) })}</span>`}
+                  : html`<span class="muted">
+                      ${flow !== null && flow !== undefined ? html`${t("zone.flow", { flow: formatNumber(flow, 1) })} · ` : nothing}
+                      ${t("zone.minutes", { minutes: formatNumber(numberState(this.hass, durations[index]), 0) })}
+                    </span>`}
               </div>
             `;
           })}
         </div>
         ${manual ? this.renderManualActions(zone) : this.renderZoneActions(zone)}
       </section>
+    `;
+  }
+
+  /** Water of the latest run and in total; only with a water meter. */
+  private renderWater(zone: ZoneInfo): TemplateResult | typeof nothing {
+    const t = this.localize;
+    if (!zone.entities.water_used) return nothing;
+    const total = numberState(this.hass, zone.entities.water_used);
+    const liters = latestResult(this.entry, zone.id)?.liters;
+    return html`
+      <dt>${t("zone.water")}</dt>
+      <dd>
+        ${liters !== null && liters !== undefined ? t("zone.last_run_liters", { liters: formatNumber(liters, 0) }) : "–"}
+        <span class="muted">· ${t("zone.total_liters", { liters: formatNumber(total, 0) })}</span>
+      </dd>
     `;
   }
 

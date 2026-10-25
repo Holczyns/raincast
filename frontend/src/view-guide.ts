@@ -72,6 +72,36 @@ const SECTIONS: Section[] = [
     `,
   },
   {
+    icon: "mdi:water-pump",
+    title: "Water meter",
+    body: html`
+      <p>
+        With a water meter set (any total water sensor in m³ or L), every valve run is metered and checked while the valve
+        is open:
+      </p>
+      <ul>
+        <li>
+          <b>Litres and flow.</b> Each valve's litres and mean flow appear in the history, and each zone gets a <i>Water used</i>
+          sensor for the water section of the energy dashboard.
+        </li>
+        <li>
+          <b>No water.</b> A valve that reports open while the meter does not move for 2 minutes is reported; its time does
+          not count as watering. Usually a closed main valve or no pressure.
+        </li>
+        <li>
+          <b>Flow limit.</b> Each valve can get a limit in l/min. Above it, judged on the mean flow after 3 minutes, the valve
+          is closed and reported: a broken pipe or sprinkler. 0 turns the check off. Set it some way above the flow the
+          history shows for that valve.
+        </li>
+      </ul>
+      <p>
+        A meter shared with the house also counts water used there during a run, which is why early morning suits watering.
+        A meter without a reading for 10 minutes is not trusted for the checks. Meter telegrams arrive with a delay, so a
+        litre or two can move from one valve to the next.
+      </p>
+    `,
+  },
+  {
     icon: "mdi:valve",
     title: "Valves and controllers",
     body: html`
@@ -126,6 +156,8 @@ const SECTIONS: Section[] = [
         <tr><td>Valve unavailable</td><td>a valve has had no state for 30 minutes</td></tr>
         <tr><td>Valve did not open</td><td>at once, cleared when the valve opens in a later run</td></tr>
         <tr><td>Valve still open</td><td>a valve reports open a minute after the stop command</td></tr>
+        <tr><td>No water through the valve</td><td>at once, the meter did not move for 2 minutes of open time</td></tr>
+        <tr><td>Flow too high</td><td>at once, the valve is closed; its limit is set per valve</td></tr>
         <tr><td>Weather data lost</td><td>a configured weather input has had no value for an hour</td></tr>
       </table>
       <p>The notify service also receives the day's plan and the end of every run.</p>

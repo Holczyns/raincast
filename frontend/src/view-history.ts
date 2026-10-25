@@ -1,5 +1,5 @@
 import { LitElement, css, html, nothing, type TemplateResult } from "lit";
-import type { EntryInfo, RunLogEntry } from "./api";
+import type { EntryInfo, RunLogEntry, ValveResult } from "./api";
 import { type HomeAssistant, type LovelaceCard, createCard } from "./ha";
 import { type Localize, type TranslationKey, dayLabel, formatNumber, timeLabel } from "./localize";
 import { shared } from "./styles";
@@ -83,14 +83,32 @@ export class RainCastHistory extends LitElement {
               <span>${zone.name}</span>
               <span class=${zone.watered ? "" : "warn-text"}>
                 ${t("history.watered", { watered: formatNumber(zone.watered_min, 0), planned: formatNumber(zone.planned_min, 0) })}
+                ${zone.liters !== null && zone.liters !== undefined ? html` · ${formatNumber(zone.liters, 0)} l` : nothing}
               </span>
             </div>
+            ${(zone.valves ?? []).map((valve) => this.renderValve(valve))}
             ${zone.not_opened.length
               ? html`<div class="muted small">${t("history.not_opened", { valves: zone.not_opened.map((valve) => this.hass.states[valve]?.attributes.friendly_name ?? valve).join(", ") })}</div>`
               : nothing}
           `,
         )}
         ${run.interrupted ? html`<div class="muted small">${t("history.interrupted")}</div>` : nothing}
+      </div>
+    `;
+  }
+
+  private renderValve(valve: ValveResult): TemplateResult {
+    const t = this.localize;
+    const parts = [t("zone.minutes", { minutes: formatNumber(valve.minutes, 1) })];
+    if (valve.liters !== null) parts.push(`${formatNumber(valve.liters, 0)} l`);
+    if (valve.flow !== null) parts.push(t("zone.flow", { flow: formatNumber(valve.flow, 1) }));
+    return html`
+      <div class="valve-row muted small">
+        <span>${this.hass.states[valve.entity_id]?.attributes.friendly_name ?? valve.entity_id}</span>
+        <span>
+          ${valve.no_flow ? html`<b class="warn-text">${t("history.no_flow")}</b> · ` : nothing}
+          ${valve.flow_high ? html`<b class="warn-text">${t("history.flow_high")}</b> · ` : nothing} ${parts.join(" · ")}
+        </span>
       </div>
     `;
   }
@@ -153,6 +171,12 @@ export class RainCastHistory extends LitElement {
       }
       .warn-text {
         color: var(--rc-warn);
+      }
+      .valve-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        padding-left: 40px;
       }
     `,
   ];

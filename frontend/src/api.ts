@@ -14,6 +14,15 @@ export interface ZoneFields {
   roofed: boolean;
 }
 
+export interface ValveResult {
+  entity_id: string;
+  minutes: number;
+  liters: number | null;
+  flow: number | null;
+  no_flow?: boolean;
+  flow_high?: boolean;
+}
+
 export interface ZoneResult {
   key: string;
   name: string;
@@ -21,6 +30,9 @@ export interface ZoneResult {
   watered_min: number;
   watered: boolean;
   not_opened: string[];
+  /** Missing in runs from before the water meter was added. */
+  liters?: number | null;
+  valves?: ValveResult[];
 }
 
 export interface RunLogEntry {
@@ -77,6 +89,20 @@ export function pressButton(hass: HomeAssistant, entityId: string | undefined): 
 /** Duration entities of a zone, in the order of its valves. */
 export function durationEntities(zone: ZoneInfo): (string | undefined)[] {
   return zone.valves.map((_valve, index) => zone.entities[`duration_${index}`]);
+}
+
+/** Flow limit entities of a zone, in the order of its valves; only with a water meter. */
+export function maxFlowEntities(zone: ZoneInfo): (string | undefined)[] {
+  return zone.valves.map((_valve, index) => zone.entities[`max_flow_${index}`]);
+}
+
+/** The zone's result in its latest run, from the log (newest first). */
+export function latestResult(entry: EntryInfo, zoneId: string): ZoneResult | undefined {
+  for (const run of entry.log) {
+    const result = run.zones.find((zone) => zone.key === zoneId);
+    if (result) return result;
+  }
+  return undefined;
 }
 
 /** Water one zone now; each valve runs for its given minutes, 0 leaves it out. */

@@ -22,6 +22,8 @@ SEVERITY: dict[Fault, ir.IssueSeverity] = {
     Fault.VALVE_UNAVAILABLE: ir.IssueSeverity.WARNING,
     Fault.VALVE_NOT_OPENED: ir.IssueSeverity.ERROR,
     Fault.VALVE_NOT_CLOSED: ir.IssueSeverity.CRITICAL,
+    Fault.NO_FLOW: ir.IssueSeverity.ERROR,
+    Fault.FLOW_HIGH: ir.IssueSeverity.CRITICAL,
     Fault.WEATHER_LOST: ir.IssueSeverity.WARNING,
 }
 
@@ -29,6 +31,8 @@ TITLES: dict[Fault, str] = {
     Fault.VALVE_UNAVAILABLE: "valve unavailable",
     Fault.VALVE_NOT_OPENED: "valve did not open",
     Fault.VALVE_NOT_CLOSED: "valve still open",
+    Fault.NO_FLOW: "no water through the valve",
+    Fault.FLOW_HIGH: "flow too high",
     Fault.WEATHER_LOST: "weather data lost",
 }
 
@@ -41,6 +45,13 @@ MESSAGES: dict[Fault, str] = {
     ),
     Fault.VALVE_NOT_CLOSED: (
         "{left_open} still reports open after the stop command. Check the valve; water may be running."
+    ),
+    Fault.NO_FLOW: (
+        "{no_flow} reported open, but the water meter did not move for 2 minutes. "
+        "Check the main valve and the water pressure. The time did not count as watering."
+    ),
+    Fault.FLOW_HIGH: (
+        "{flow_high} was closed: its flow was above the limit set for it. Check for a broken pipe or sprinkler."
     ),
     Fault.WEATHER_LOST: (
         "{weather} has had no value for an hour. Zones are watered by their intervals alone until it returns."

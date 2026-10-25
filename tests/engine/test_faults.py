@@ -6,7 +6,14 @@ START = datetime(2026, 6, 10, 4, 0)
 
 
 def inputs(**overrides):
-    values = {"unavailable_valves": (), "not_opened": (), "left_open": (), "weather_missing": ()}
+    values = {
+        "unavailable_valves": (),
+        "not_opened": (),
+        "left_open": (),
+        "no_flow": (),
+        "flow_high": (),
+        "weather_missing": (),
+    }
     values.update(overrides)
     return FaultInputs(**values)
 

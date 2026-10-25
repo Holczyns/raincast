@@ -6,12 +6,17 @@ waters the due zones one valve after another. Manual runs go through the
 same queue; only one run is active at a time. The coordinator is the only
 writer of the configured valves.
 
+With a water meter configured, every valve run is metered: the reading
+when a valve starts against the reading when the next one starts, or a
+minute after the last one closed. A shared meter also counts water used
+in the house meanwhile.
+
 Every minute the plan shown by the entities is computed again and the
 fault conditions are checked.
 
-State kept across restarts (Store): settings, zone intervals and valve
-durations, last watering dates, valve control, the run log and the
-valves of a run in progress. A run cut off by a restart is not resumed;
+State kept across restarts (Store): settings, zone intervals, valve
+durations and flow limits, last watering dates, water used per zone,
+valve control, the run log and the valves of a run in progress. A run cut off by a restart is not resumed;
 its valves are closed on the next start. Fault timers are not kept.
 """
 
@@ -42,10 +47,13 @@ from .const import (
     CONF_ROOFED,
     CONF_SOIL_SENSOR,
     CONF_VALVES,
+    CONF_WATER_METER,
     DEFAULT_DURATION,
     DEFAULT_INTERVAL,
     DEFAULT_SETTINGS,
     DOMAIN,
+    METER_SETTLE_SECONDS,
+    METER_STALE_SECONDS,
     NATIVE_START,
     POLL_SECONDS,
     RUN_LOG_SIZE,
@@ -61,15 +69,18 @@ from .engine import (
     Command,
     FaultInputs,
     FaultMonitor,
+    FlowFault,
     Outcome,
     Plan,
     StartMode,
     ValveRun,
     ValveSlot,
+    ValveWater,
     Weather,
     ZoneConfig,
     conditions,
     make_plan,
+    meter_liters,
     next_start,
     zone_watered,
 )
@@ -106,6 +117,8 @@ class RunState:
     valve: str | None = None
     valve_ends: datetime | None = None
     results: list[dict[str, Any]] = field(default_factory=list)
+    metered: tuple[dict[str, Any], dict[str, Any], str, float] | None = None
+    """Valve result, zone result, zone key and meter reading of the valve being metered."""
 
 
 class RainCastCoordinator(DataUpdateCoordinator[Plan]):
@@ -117,6 +130,7 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
         self.settings: dict[str, Any] = dict(DEFAULT_SETTINGS)
         self.zone_tuning: dict[str, dict[str, Any]] = {}
         self.last_watered: dict[str, date | None] = {}
+        self.water_totals: dict[str, float] = {}
         self.control_active = False
         self.log: list[dict[str, Any]] = []
         self.next_start: datetime | None = None
@@ -130,6 +144,9 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
         # Valves that did not open in their latest run, and valves still open after a stop.
         self._not_opened: set[str] = set()
         self._left_open: set[str] = set()
+        # Valves the meter found without water, or stopped for too much flow, in their latest run.
+        self._no_flow: set[str] = set()
+        self._flow_high: set[str] = set()
 
     # Configuration views
 
@@ -179,17 +196,20 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
         self.log = list(stored.get("log", []))[-RUN_LOG_SIZE:]
         stored_zones = stored.get("zones", {})
         stored_dates = stored.get("last_watered", {})
+        stored_totals = stored.get("water_totals", {})
         for key, subentry in self.zones.items():
             tuning = stored_zones.get(key, {})
             default_duration = subentry.data.get(CONF_DURATION, DEFAULT_DURATION)
             durations = dict(tuning.get("durations", {}))
-            for valve in subentry.data.get(CONF_VALVES, []):
-                durations.setdefault(valve, default_duration)
+            max_flows = dict(tuning.get("max_flows", {}))
+            valves = subentry.data.get(CONF_VALVES, [])
             self.zone_tuning[key] = {
                 CONF_INTERVAL: tuning.get(CONF_INTERVAL, subentry.data.get(CONF_INTERVAL, DEFAULT_INTERVAL)),
-                # Durations of valves no longer in the zone are dropped.
-                "durations": {valve: durations[valve] for valve in subentry.data.get(CONF_VALVES, [])},
+                # Values of valves no longer in the zone are dropped.
+                "durations": {valve: durations.get(valve, default_duration) for valve in valves},
+                "max_flows": {valve: max_flows.get(valve, 0.0) for valve in valves},
             }
+            self.water_totals[key] = float(stored_totals.get(key, 0.0))
             stored_date = stored_dates.get(key)
             self.last_watered[key] = date.fromisoformat(stored_date) if stored_date else None
 
@@ -233,6 +253,7 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
                 for key, value in self.zone_tuning.items()
             },
             "last_watered": {key: value.isoformat() for key, value in self.last_watered.items() if value},
+            "water_totals": dict(self.water_totals),
             "active_run": active_run,
             "log": self.log[-RUN_LOG_SIZE:],
         }
@@ -253,6 +274,17 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
             soil_max=float(self.settings[SETTING_SOIL_MAX]),
             rain_max=float(self.settings[SETTING_RAIN_MAX]),
         )
+
+    def meter_liters(self) -> float | None:
+        """Current water meter reading in litres; None without a meter or a fresh reading."""
+        entity_id = self.entry.data.get(CONF_WATER_METER)
+        state = self.hass.states.get(entity_id) if entity_id else None
+        if state is None:
+            return None
+        fresh = (dt_util.utcnow() - state.last_reported).total_seconds() < METER_STALE_SECONDS
+        if not fresh:
+            return None
+        return meter_liters(_number(state.state), state.attributes.get("unit_of_measurement"))
 
     def _plan(self) -> Plan:
         return make_plan(self.zone_configs(), self.last_watered, self.weather(), dt_util.now().date())
@@ -358,12 +390,17 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
             for zone in zones:
                 run.zone = zone.key
                 await self._async_water_zone(run, zone, configs[zone.key].minutes * 60)
+            run.zone = None
+            # The meter reports the last litres of the last valve with a delay.
+            if run.metered is not None:
+                await asyncio.sleep(METER_SETTLE_SECONDS)
         except asyncio.CancelledError:
             interrupted = True
             if run.valve is not None:
                 await self._async_stop_valve(run.valve)
             raise
         finally:
+            self._book_liters(run)
             await self._async_finish_run(run, interrupted)
 
     @staticmethod
@@ -387,23 +424,43 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
             "watered_min": 0.0,
             "watered": False,
             "not_opened": [],
+            "liters": None,
+            "valves": [],
         }
         run.results.append(result)
         planned_s = 0.0
         watered_s = 0.0
+        metered = bool(self.entry.data.get(CONF_WATER_METER))
         for slot in zone.active_valves:
             valve_run = ValveRun(planned_s=slot.minutes * 60)
+            water = (
+                ValveWater(max_flow=float(self.zone_tuning[zone.key]["max_flows"].get(slot.entity_id, 0)))
+                if metered
+                else None
+            )
+            valve_result: dict[str, Any] = {"entity_id": slot.entity_id, "minutes": 0.0, "liters": None, "flow": None}
+            result["valves"].append(valve_result)
+            # The previous valve is booked at the reading this valve starts from.
+            self._book_liters(run)
+            liters = self.meter_liters()
+            if metered and (liters is not None):
+                run.metered = (valve_result, result, zone.key, liters)
             run.valve = slot.entity_id
             run.valve_ends = dt_util.now() + timedelta(minutes=slot.minutes)
             self.async_update_listeners()
             try:
-                await self._async_water_valve(slot.entity_id, valve_run)
+                await self._async_water_valve(slot.entity_id, valve_run, water)
             finally:
+                valve_s = valve_run.watered_s(dt_util.now())
+                valve_result["minutes"] = round(valve_s / 60, 1)
                 planned_s += valve_run.planned_s
-                watered_s += valve_run.watered_s(dt_util.now())
+                # A valve open without water through the meter has not watered.
+                if (water is None) or not water.no_flow:
+                    watered_s += valve_s
                 result["planned_min"] = round(planned_s / 60, 1)
                 result["watered_min"] = round(watered_s / 60, 1)
             self._book_outcome(slot.entity_id, valve_run.outcome, result)
+            self._book_flow(slot.entity_id, water, valve_result)
         run.valve = None
         run.valve_ends = None
         result["watered"] = zone_watered(reference_s, watered_s)
@@ -420,9 +477,41 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
         if outcome is Outcome.NOT_CLOSED:
             self._left_open.add(valve)
 
-    async def _async_water_valve(self, valve: str, valve_run: ValveRun) -> None:
+    def _book_flow(self, valve: str, water: ValveWater | None, valve_result: dict[str, Any]) -> None:
+        valve_result["no_flow"] = bool(water and water.no_flow)
+        valve_result["flow_high"] = bool(water and water.flow_high)
+        for flagged, found in ((self._no_flow, valve_result["no_flow"]), (self._flow_high, valve_result["flow_high"])):
+            if found:
+                flagged.add(valve)
+            else:
+                flagged.discard(valve)
+
+    def _book_liters(self, run: RunState) -> None:
+        """Book the water of the valve being metered, up to the current reading."""
+        if run.metered is None:
+            return
+        valve_result, zone_result, zone_key, start = run.metered
+        run.metered = None
+        liters = self.meter_liters()
+        if liters is None:
+            return
+        used = max(liters - start, 0.0)
+        valve_result["liters"] = round(used, 1)
+        if valve_result["minutes"] > 0:
+            valve_result["flow"] = round(used / valve_result["minutes"], 2)
+        zone_result["liters"] = round((zone_result["liters"] or 0.0) + used, 1)
+        self.water_totals[zone_key] = self.water_totals.get(zone_key, 0.0) + used
+
+    async def _async_water_valve(self, valve: str, valve_run: ValveRun, water: ValveWater | None) -> None:
         while valve_run.outcome is None:
-            command = valve_run.step(self._is_open(valve), dt_util.now())
+            now = dt_util.now()
+            is_open = self._is_open(valve)
+            command = valve_run.step(is_open, now)
+            # Too much water: close this valve now, the run goes on with the next one.
+            judged = is_open and (water is not None) and (valve_run.stop_at is None)
+            if judged and (water.observe(valve_run.watered_s(now), self.meter_liters()) is FlowFault.FLOW_HIGH):
+                _LOGGER.warning("%s: %s stopped, flow above its limit", self.entry.title, valve)
+                command = valve_run.abort(now)
             if command is Command.START:
                 await self._async_start_valve(valve, valve_run.remaining_minutes())
             if command is Command.STOP:
@@ -542,6 +631,8 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
             unavailable_valves=unavailable,
             not_opened=tuple(sorted(self._not_opened)),
             left_open=tuple(sorted(self._left_open)),
+            no_flow=tuple(sorted(self._no_flow)),
+            flow_high=tuple(sorted(self._flow_high)),
             weather_missing=weather_missing,
         )
         raised, cleared = self.faults.update(conditions(fault_inputs), now)
@@ -551,6 +642,8 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
             "unavailable": self._names(fault_inputs.unavailable_valves),
             "not_opened": self._names(fault_inputs.not_opened),
             "left_open": self._names(fault_inputs.left_open),
+            "no_flow": self._names(fault_inputs.no_flow),
+            "flow_high": self._names(fault_inputs.flow_high),
             "weather": self._names(fault_inputs.weather_missing),
         }
         await async_report(self.hass, self.entry, raised, cleared, values)
@@ -581,6 +674,12 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
     def async_set_duration(self, zone_key: str, valve: str, minutes: float) -> None:
         self.zone_tuning[zone_key]["durations"][valve] = minutes
         self.async_refresh_plan()
+
+    @callback
+    def async_set_max_flow(self, zone_key: str, valve: str, flow: float) -> None:
+        self.zone_tuning[zone_key]["max_flows"][valve] = flow
+        self._schedule_save()
+        self.async_update_listeners()
 
     @callback
     def async_set_last_watered(self, zone_key: str, day: date | None) -> None:

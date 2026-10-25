@@ -5,6 +5,7 @@ import {
   type ZoneInfo,
   addZone,
   durationEntities,
+  maxFlowEntities,
   removeZone,
   updateSources,
   updateZone,
@@ -15,11 +16,11 @@ import type { Localize, TranslationKey } from "./localize";
 import { controlStyles, numberControl } from "./number-control";
 import { shared } from "./styles";
 
-const SOURCE_FIELDS: { key: string; label: TranslationKey }[] = [
-  { key: "soil_sensor", label: "src.soil_sensor" },
-  { key: "rain_sensor", label: "src.rain_sensor" },
+const SOURCE_FIELDS: { key: string; label: TranslationKey; domains: string[]; deviceClass?: string }[] = [
+  { key: "soil_sensor", label: "src.soil_sensor", domains: ["sensor", "input_number"] },
+  { key: "rain_sensor", label: "src.rain_sensor", domains: ["sensor", "input_number"] },
+  { key: "water_meter", label: "src.water_meter", domains: ["sensor"], deviceClass: "water" },
 ];
-const SOURCE_DOMAINS = ["sensor", "input_number"];
 const VALVE_DOMAINS = ["valve", "switch", "input_boolean"];
 const NEW_ZONE_INTERVAL = 3;
 const NEW_ZONE_DURATION = 15;
@@ -109,7 +110,8 @@ export class RainCastSourcesCard extends LitElement {
             <label>${t(field.label)}</label>
             <raincast-entity-picker
               .hass=${this.hass}
-              .domains=${SOURCE_DOMAINS}
+              .domains=${field.domains}
+              .deviceClass=${field.deviceClass}
               .value=${draft[field.key]}
               optional
               @value-changed=${(event: CustomEvent) => (this.draft = { ...draft, [field.key]: event.detail })}
@@ -226,6 +228,7 @@ export class RainCastZonesCard extends LitElement {
   private renderZone(zone: ZoneInfo): TemplateResult {
     const t = this.localize;
     const durations = durationEntities(zone);
+    const maxFlows = maxFlowEntities(zone);
     return html`
       <div class="zone-block ${zone.id === this.focusZone ? "focus" : ""}" data-zone=${zone.id}>
         <div class="zone">
@@ -238,7 +241,16 @@ export class RainCastZonesCard extends LitElement {
           </button>
         </div>
         ${numberControl(this.hass, zone.entities.interval, t("zone.interval"))}
-        ${zone.valves.map((valve, index) => numberControl(this.hass, durations[index], friendly(this.hass, valve)))}
+        ${zone.valves.map(
+          (valve, index) => html`
+            <div class="valve-tuning">
+              <div class="valve-name">${friendly(this.hass, valve)}</div>
+              ${numberControl(this.hass, durations[index], t("zone.time"))}
+              ${numberControl(this.hass, maxFlows[index], t("zone.max_flow"))}
+            </div>
+          `,
+        )}
+        ${maxFlows.some((entity) => !!entity) ? html`<p class="muted small">${t("zone.max_flow_hint")}</p>` : nothing}
       </div>
     `;
   }
@@ -342,6 +354,14 @@ export class RainCastZonesCard extends LitElement {
       .zone-block {
         border-bottom: 1px solid var(--divider-color);
         padding: 6px 0 8px;
+      }
+      .valve-tuning {
+        padding-left: 30px;
+        margin-top: 4px;
+      }
+      .valve-name {
+        font-size: 0.85rem;
+        color: var(--rc-muted);
       }
       .zone-block.focus {
         border: 1px solid var(--primary-color);

@@ -27,6 +27,7 @@ from .const import (
     CONF_ROOFED,
     CONF_SOIL_SENSOR,
     CONF_VALVES,
+    CONF_WATER_METER,
     DEFAULT_DURATION,
     DEFAULT_INTERVAL,
     DOMAIN,
@@ -36,7 +37,7 @@ from .problems import notify_services
 
 SOURCE_DOMAINS = ("sensor", "input_number")
 VALVE_DOMAINS = ("valve", "switch", "input_boolean")
-SOURCE_FIELDS = (CONF_SOIL_SENSOR, CONF_RAIN_SENSOR)
+SOURCE_FIELDS = (CONF_SOIL_SENSOR, CONF_RAIN_SENSOR, CONF_WATER_METER)
 
 
 @callback
@@ -163,7 +164,7 @@ def ws_set_options(hass: HomeAssistant, connection: websocket_api.ActiveConnecti
 )
 @callback
 def ws_update_sources(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
-    """Replace the weather inputs; a field not sent or empty is cleared."""
+    """Replace the weather inputs and the water meter; a field not sent or empty is cleared."""
     entry = _entry(hass, connection, msg)
     if entry is None:
         return

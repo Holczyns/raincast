@@ -9,6 +9,8 @@ DOMAIN: Final = "raincast"
 # Main entry: optional weather inputs
 CONF_SOIL_SENSOR: Final = "soil_sensor"
 CONF_RAIN_SENSOR: Final = "rain_sensor"
+# Main entry: optional water meter, read while valves are open
+CONF_WATER_METER: Final = "water_meter"
 # Option: notify service (without the "notify." prefix) told about plans, runs and faults.
 CONF_NOTIFY_SERVICE: Final = "notify_service"
 
@@ -18,6 +20,7 @@ CONF_VALVES: Final = "valves"
 CONF_ROOFED: Final = "roofed"
 CONF_INTERVAL: Final = "interval"
 CONF_DURATION: Final = "duration"
+CONF_MAX_FLOW: Final = "max_flow"
 
 DEFAULT_NAME: Final = "RainCast"
 DEFAULT_INTERVAL: Final = 3
@@ -47,5 +50,9 @@ NATIVE_START: Final[dict[str, tuple[str, str]]] = {
     "bhyve": ("bhyve", "start_watering"),
 }
 RUN_LOG_SIZE: Final = 60
+# A meter that has not reported for this long is not trusted for flow checks.
+METER_STALE_SECONDS: Final = 600
+# The meter reports with a delay, so the last valve of a run is booked a minute after it closed.
+METER_SETTLE_SECONDS: Final = 60
 
 STORAGE_VERSION: Final = 1

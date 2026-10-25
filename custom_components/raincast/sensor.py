@@ -1,16 +1,17 @@
-"""Next start, the day's plan and the state of each zone."""
+"""Next start, the day's plan, the state of each zone and the water it used."""
 
 from __future__ import annotations
 
 from datetime import date, datetime
 from typing import Any
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
-from homeassistant.const import UnitOfTime
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
+from homeassistant.const import UnitOfTime, UnitOfVolume
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import RainCastConfigEntry
+from .const import CONF_WATER_METER
 from .engine import ZoneStatus
 from .entity import RainCastEntity, RainCastZoneEntity
 
@@ -24,11 +25,15 @@ async def async_setup_entry(
 ) -> None:
     coordinator = entry.runtime_data
     async_add_entities([NextStartSensor(coordinator, "next_start"), PlannedSensor(coordinator, "planned")])
+    metered = bool(entry.data.get(CONF_WATER_METER))
     for zone in coordinator.zones.values():
-        async_add_entities(
-            [ZoneStatusSensor(coordinator, zone, "status"), NextDueSensor(coordinator, zone, "next_due")],
-            config_subentry_id=zone.subentry_id,
-        )
+        entities: list[SensorEntity] = [
+            ZoneStatusSensor(coordinator, zone, "status"),
+            NextDueSensor(coordinator, zone, "next_due"),
+        ]
+        if metered:
+            entities.append(WaterUsedSensor(coordinator, zone, "water_used"))
+        async_add_entities(entities, config_subentry_id=zone.subentry_id)
 
 
 class NextStartSensor(RainCastEntity, SensorEntity):
@@ -87,3 +92,16 @@ class NextDueSensor(RainCastZoneEntity, SensorEntity):
     def native_value(self) -> date | None:
         plan = self.zone_plan
         return plan.next_due if plan else None
+
+
+class WaterUsedSensor(RainCastZoneEntity, SensorEntity):
+    """Water metered for the zone over all its runs; suits the water section of the energy dashboard."""
+
+    _attr_device_class = SensorDeviceClass.WATER
+    _attr_native_unit_of_measurement = UnitOfVolume.LITERS
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_suggested_display_precision = 0
+
+    @property
+    def native_value(self) -> float:
+        return round(self.coordinator.water_totals.get(self.zone_key, 0.0), 1)

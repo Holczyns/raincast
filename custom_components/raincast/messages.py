@@ -81,6 +81,8 @@ def run_message(name: str, entry: dict[str, Any], friendly_name: Callable[[str],
     lines = []
     for zone in zones:
         line = f"• {zone['name']}: {zone['watered_min']:g} of {zone['planned_min']:g} min"
+        if zone.get("liters") is not None:
+            line += f", {zone['liters']:.0f} l"
         if zone["not_opened"]:
             line += ", did not open: " + ", ".join(friendly_name(valve) for valve in zone["not_opened"])
         lines.append(line)

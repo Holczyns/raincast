@@ -15,15 +15,17 @@
         }
       },
       "weather": {
-        "title": "Weather",
-        "description": "Both inputs are optional. Without them, or while they have no value, zones are watered by their intervals alone.",
+        "title": "Weather and water",
+        "description": "All inputs are optional. Without the weather inputs, or while they have no value, zones are watered by their intervals alone.",
         "data": {
           "soil_sensor": "Soil moisture",
-          "rain_sensor": "Rain forecast"
+          "rain_sensor": "Rain forecast",
+          "water_meter": "Water meter"
         },
         "data_description": {
           "soil_sensor": "Sensor in %. Zones open to the sky are held while it is above the soil limit. A measured sensor or a model value, such as Open-Meteo soil moisture, both work.",
-          "rain_sensor": "Sensor in mm for the coming day. Zones open to the sky are held while it is above the rain limit."
+          "rain_sensor": "Sensor in mm for the coming day. Zones open to the sky are held while it is above the rain limit.",
+          "water_meter": "Total water sensor, in m³ or L. RainCast meters every valve run, finds valves open without water and closes a valve whose flow is above its limit. A meter shared with the house also counts water used there meanwhile."
         }
       },
       "zone": {
@@ -52,11 +54,12 @@
         }
       },
       "reconfigure": {
-        "title": "Weather",
-        "description": "Change the weather inputs. Limits and start times are changed on the device page.",
+        "title": "Weather and water",
+        "description": "Change the weather inputs and the water meter. Limits and start times are changed on the device page.",
         "data": {
           "soil_sensor": "Soil moisture",
-          "rain_sensor": "Rain forecast"
+          "rain_sensor": "Rain forecast",
+          "water_meter": "Water meter"
         }
       }
     }
@@ -157,6 +160,9 @@
       },
       "zone_duration": {
         "name": "Time {valve}"
+      },
+      "zone_max_flow": {
+        "name": "Max flow {valve}"
       }
     },
     "select": {
@@ -189,6 +195,9 @@
       },
       "zone_next_due": {
         "name": "Next due"
+      },
+      "zone_water_used": {
+        "name": "Water used"
       }
     },
     "switch": {
@@ -218,6 +227,14 @@
     "weather_lost": {
       "title": "{name}: weather data lost",
       "description": "{weather} has had no value for an hour. Zones are watered by their intervals alone until it returns."
+    },
+    "no_flow": {
+      "title": "{name}: no water through the valve",
+      "description": "{no_flow} reported open, but the water meter did not move for 2 minutes. Check the main valve and the water pressure. The time did not count as watering; the issue clears once the valve runs with water."
+    },
+    "flow_high": {
+      "title": "{name}: flow too high",
+      "description": "{flow_high} was closed: its mean flow was above the limit set for it. Check for a broken pipe or sprinkler. The issue clears once the valve runs within its limit."
     }
   }
 }
