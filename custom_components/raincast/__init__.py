@@ -10,7 +10,7 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.typing import ConfigType
 
-from .const import CONF_OUTDOOR_SENSOR, CONF_WATER_METER, DOMAIN
+from .const import CONF_OUTDOOR_SENSOR, CONF_ROOFED, CONF_SOIL_SENSOR, CONF_WATER_METER, DOMAIN
 from .coordinator import RainCastCoordinator
 from .entity import controller_device_info
 from .frontend import async_register_frontend
@@ -36,6 +36,23 @@ type RainCastConfigEntry = ConfigEntry[RainCastCoordinator]
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     async_register_commands(hass)
     await async_register_frontend(hass)
+    return True
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: RainCastConfigEntry) -> bool:
+    """Version 1 had a general soil sensor; it becomes the own sensor of the zones that used it."""
+    if entry.version > 2:
+        return False
+    if entry.version == 1:
+        general = entry.data.get(CONF_SOIL_SENSOR)
+        for subentry in list(entry.subentries.values()):
+            uses_general = general and not subentry.data.get(CONF_SOIL_SENSOR) and not subentry.data.get(CONF_ROOFED)
+            if uses_general:
+                hass.config_entries.async_update_subentry(
+                    entry, subentry, data={**subentry.data, CONF_SOIL_SENSOR: general}
+                )
+        data = {key: value for key, value in entry.data.items() if key != CONF_SOIL_SENSOR}
+        hass.config_entries.async_update_entry(entry, data=data, version=2)
     return True
 
 

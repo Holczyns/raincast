@@ -6,8 +6,7 @@ from typing import Final
 
 DOMAIN: Final = "raincast"
 
-# Main entry: optional weather inputs; a zone may have its own soil sensor
-CONF_SOIL_SENSOR: Final = "soil_sensor"
+# Main entry: optional weather inputs
 CONF_RAIN_SENSOR: Final = "rain_sensor"
 CONF_OUTDOOR_SENSOR: Final = "outdoor_sensor"
 # Main entry: optional water meter, read while valves are open
@@ -19,6 +18,8 @@ CONF_NOTIFY_SERVICE: Final = "notify_service"
 SUBENTRY_ZONE: Final = "zone"
 CONF_VALVES: Final = "valves"
 CONF_ROOFED: Final = "roofed"
+# Zone subentry: optional soil sensor; a zone without one does not look at the soil
+CONF_SOIL_SENSOR: Final = "soil_sensor"
 CONF_INTERVAL: Final = "interval"
 CONF_DURATION: Final = "duration"
 CONF_MAX_FLOW: Final = "max_flow"

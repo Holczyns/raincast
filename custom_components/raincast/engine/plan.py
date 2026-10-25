@@ -5,8 +5,8 @@ Rules, applied per zone in this order:
 2. Frost holds every due zone, roofed or not: water left in pipes and
    heads freezes.
 3. A due zone is held when its soil is wetter than its own soil limit.
-   The soil value is the zone's own sensor, or the general sensor for a
-   zone open to the sky; a roofed zone without its own sensor has none.
+   The soil value comes from the zone's own sensor; a zone without one
+   does not look at the soil.
 4. A due zone open to the sky is held when more rain is forecast than
    the rain limit.
 5. An input that is not configured or has no value holds nothing, so

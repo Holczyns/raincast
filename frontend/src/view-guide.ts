@@ -28,8 +28,8 @@ const SECTIONS: Section[] = [
         <li><b>Interval.</b> A zone is due when its interval has passed since it was last watered, or when it was never watered.</li>
         <li><b>Frost.</b> Below the frost limit no zone is watered, roofed or not.</li>
         <li>
-          <b>Soil.</b> A due zone is held while its soil is wetter than its own soil limit, from its own sensor or, for a
-          zone open to the sky, the general one.
+          <b>Soil.</b> A due zone with a soil sensor is held while its soil is wetter than its soil limit. A zone without
+          one does not look at the soil.
         </li>
         <li><b>Rain.</b> A due zone open to the sky is held while more rain is forecast than the rain limit.</li>
         <li><b>Plan.</b> The due zones are sent as a notification at the start, the skipped ones with the reason.</li>
@@ -87,9 +87,9 @@ const SECTIONS: Section[] = [
       <p>All inputs are optional and can be any sensor:</p>
       <ul>
         <li>
-          <b>Soil moisture</b> in %, measured or a model value such as Open-Meteo's soil moisture at 3–9 cm. The general
-          sensor serves every zone open to the sky; any zone can have its own sensor or input number instead, for example a
-          greenhouse. The limit is set per zone.
+          <b>Soil moisture</b> in %, per zone: a sensor or an input number, measured or a model value such as Open-Meteo's
+          soil moisture at 3–9 cm. A greenhouse can have its own sensor and limit, the lawn another. A zone without one
+          does not look at the soil.
         </li>
         <li><b>Rain forecast</b> in mm for the coming day, for zones open to the sky.</li>
         <li><b>Outdoor temperature</b> for the frost hold.</li>

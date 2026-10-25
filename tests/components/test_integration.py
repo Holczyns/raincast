@@ -48,12 +48,19 @@ async def run_wizard(
     result = await hass.config_entries.flow.async_configure(result["flow_id"], {"name": "Garden"})
     assert result["step_id"] == "weather"
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {"soil_sensor": SOIL, "rain_sensor": RAIN, **({"water_meter": meter} if meter else {})}
+        result["flow_id"], {"rain_sensor": RAIN, **({"water_meter": meter} if meter else {})}
     )
     assert result["step_id"] == "zone"
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
-        {"name": "Lawn", "valves": list(valves), "roofed": False, "interval": 3, "duration": duration},
+        {
+            "name": "Lawn",
+            "valves": list(valves),
+            "roofed": False,
+            "soil_sensor": SOIL,
+            "interval": 3,
+            "duration": duration,
+        },
     )
     assert result["type"] is FlowResultType.MENU
     result = await hass.config_entries.flow.async_configure(result["flow_id"], {"next_step_id": "finish"})
@@ -279,7 +286,7 @@ async def test_panel_commands_change_zones_and_sources(hass: HomeAssistant, gard
     [described] = (await client.receive_json())["result"]
     [zone] = described["zones"]
     assert zone["entities"]["duration_0"].startswith("number.")
-    assert described["sources"]["soil_sensor"] == SOIL
+    assert zone["soil_sensor"] == SOIL
 
     await client.send_json_auto_id(
         {
@@ -311,10 +318,10 @@ async def test_panel_commands_change_zones_and_sources(hass: HomeAssistant, gard
     await hass.async_block_till_done()
     assert [subentry.title for subentry in entry.subentries.values()] == ["Greenhouse"]
 
-    await client.send_json_auto_id({"type": "raincast/update_sources", "entry_id": entry.entry_id, "rain_sensor": RAIN})
+    await client.send_json_auto_id({"type": "raincast/update_sources", "entry_id": entry.entry_id})
     assert (await client.receive_json())["success"]
     await hass.async_block_till_done()
-    assert "soil_sensor" not in entry.data
+    assert "rain_sensor" not in entry.data
 
     await client.send_json_auto_id({"type": "raincast/set_options", "entry_id": entry.entry_id, "notify_service": None})
     assert (await client.receive_json())["success"]
@@ -431,15 +438,11 @@ async def test_valve_above_its_flow_limit_is_closed(hass: HomeAssistant, garden,
     assert "Garden: flow too high" in [call.data["title"] for call in notifications]
 
 
-async def test_zone_soil_sensor_and_limit_override_the_general_ones(hass: HomeAssistant, garden) -> None:
+async def test_zone_soil_limit_and_zone_without_a_sensor(hass: HomeAssistant, garden) -> None:
     entry = await run_wizard(hass)
     [zone_id] = entry.subentries
-    hass.states.async_set("sensor.greenhouse_soil", "40.0", {"unit_of_measurement": "%"})
-    hass.config_entries.async_update_subentry(
-        entry,
-        entry.subentries[zone_id],
-        data={**entry.subentries[zone_id].data, "soil_sensor": "sensor.greenhouse_soil"},
-    )
+    hass.states.async_set(SOIL, "40.0", {"unit_of_measurement": "%"})
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
     await hass.async_block_till_done()
     status = entity_id(hass, "sensor", "_status")
     assert hass.states.get(status).state == "wet_soil"
@@ -447,6 +450,39 @@ async def test_zone_soil_sensor_and_limit_override_the_general_ones(hass: HomeAs
         "number", "set_value", {"entity_id": entity_id(hass, "number", "_soil_max"), "value": 45}, blocking=True
     )
     assert hass.states.get(status).state == "due"
+    # Without a sensor of its own the zone does not look at the soil at all.
+    await hass.services.async_call(
+        "number", "set_value", {"entity_id": entity_id(hass, "number", "_soil_max"), "value": 10}, blocking=True
+    )
+    data = {key: value for key, value in entry.subentries[zone_id].data.items() if key != "soil_sensor"}
+    hass.config_entries.async_update_subentry(entry, entry.subentries[zone_id], data=data)
+    await hass.async_block_till_done()
+    assert hass.states.get(status).state == "due"
+
+
+async def test_general_soil_sensor_moves_to_the_open_zones(hass: HomeAssistant, garden) -> None:
+    lawn = {"data": {"valves": [VALVE_1], "roofed": False}, "subentry_type": "zone", "title": "Lawn", "unique_id": None}
+    greenhouse = {
+        "data": {"valves": [VALVE_2], "roofed": True},
+        "subentry_type": "zone",
+        "title": "Greenhouse",
+        "unique_id": None,
+    }
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Garden",
+        version=1,
+        data={"soil_sensor": SOIL, "rain_sensor": RAIN},
+        subentries_data=[lawn, greenhouse],
+    )
+    entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    assert entry.version == 2
+    assert "soil_sensor" not in entry.data
+    zones = {subentry.title: subentry.data for subentry in entry.subentries.values()}
+    assert zones["Lawn"]["soil_sensor"] == SOIL
+    assert "soil_sensor" not in zones["Greenhouse"]
 
 
 async def test_frost_holds_the_zone(hass: HomeAssistant, garden) -> None:

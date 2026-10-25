@@ -27,7 +27,6 @@ const SOURCE_GROUPS: { title: TranslationKey; fields: SourceField[] }[] = [
   {
     title: "src.weather",
     fields: [
-      { key: "soil_sensor", label: "src.soil_sensor", domains: ["sensor", "input_number"] },
       { key: "rain_sensor", label: "src.rain_sensor", domains: ["sensor", "input_number"] },
       { key: "outdoor_sensor", label: "src.outdoor_sensor", domains: ["sensor"], deviceClass: "temperature" },
     ],

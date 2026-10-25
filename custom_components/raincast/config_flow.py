@@ -47,7 +47,7 @@ from .const import (
 from .problems import notify_services
 
 VALVE_DOMAINS = ["valve", "switch", "input_boolean"]
-WEATHER_KEYS = (CONF_SOIL_SENSOR, CONF_RAIN_SENSOR, CONF_OUTDOOR_SENSOR, CONF_WATER_METER)
+WEATHER_KEYS = (CONF_RAIN_SENSOR, CONF_OUTDOOR_SENSOR, CONF_WATER_METER)
 
 
 def _number(minimum: float, maximum: float, step: float, unit: str) -> NumberSelector:
@@ -70,7 +70,6 @@ def weather_schema(defaults: dict[str, Any]) -> probatio.Schema:
     temperature = EntitySelector(EntitySelectorConfig(filter={"domain": "sensor", "device_class": "temperature"}))
     return probatio.Schema(
         {
-            _optional(CONF_SOIL_SENSOR, defaults): sensor,
             _optional(CONF_RAIN_SENSOR, defaults): sensor,
             _optional(CONF_OUTDOOR_SENSOR, defaults): temperature,
             _optional(CONF_WATER_METER, defaults): meter,
@@ -109,7 +108,8 @@ def _zone_subentry(zone: dict[str, Any]) -> ConfigSubentryData:
 class RainCastConfigFlow(ConfigFlow, domain=DOMAIN):
     """Guided setup; zones collected here become subentries of the entry."""
 
-    VERSION = 1
+    # 2: the general soil sensor moved to the zones open to the sky.
+    VERSION = 2
 
     def __init__(self) -> None:
         self._data: dict[str, Any] = {}

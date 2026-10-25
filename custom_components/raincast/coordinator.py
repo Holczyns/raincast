@@ -305,16 +305,6 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
             frost_min=float(self.settings[SETTING_FROST_MIN]),
         )
 
-    def soil_sensor(self, zone_key: str) -> str | None:
-        """Sensor a zone is judged on: its own, or the general one for a zone open to the sky."""
-        zone = self.zones[zone_key]
-        own = zone.data.get(CONF_SOIL_SENSOR)
-        if own:
-            return own
-        if zone.data.get(CONF_ROOFED, False):
-            return None
-        return self.entry.data.get(CONF_SOIL_SENSOR)
-
     @property
     def in_season(self) -> bool:
         return in_season(
@@ -333,7 +323,7 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
         return meter_liters(_number(state.state), state.attributes.get("unit_of_measurement"))
 
     def _plan(self) -> Plan:
-        soil = {key: self._entity_value(self.soil_sensor(key)) for key in self.zones}
+        soil = {key: self._entity_value(zone.data.get(CONF_SOIL_SENSOR)) for key, zone in self.zones.items()}
         return make_plan(self.zone_configs(), self.last_watered, soil, self.weather(), dt_util.now().date())
 
     @callback
@@ -710,7 +700,7 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
             for valve in self.valves
             if (self.hass.states.get(valve) is None) or (self.hass.states.get(valve).state in MISSING_STATES)
         )
-        weather_inputs = [self.entry.data.get(key) for key in (CONF_SOIL_SENSOR, CONF_RAIN_SENSOR, CONF_OUTDOOR_SENSOR)]
+        weather_inputs = [self.entry.data.get(key) for key in (CONF_RAIN_SENSOR, CONF_OUTDOOR_SENSOR)]
         weather_inputs += [zone.data.get(CONF_SOIL_SENSOR) for zone in self.zones.values()]
         weather_missing = tuple(
             dict.fromkeys(

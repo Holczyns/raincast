@@ -7,7 +7,6 @@ import {
   latestResult,
   pressButton,
   runZone,
-  zoneSoilSensor,
 } from "./api";
 import { type HomeAssistant, fireEvent, isOn, numberState } from "./ha";
 import { type Localize, type TranslationKey, dayLabel, formatNumber, timeLabel } from "./localize";
@@ -321,7 +320,7 @@ export class RainCastHome extends LitElement {
   /** Soil moisture the zone is judged on, against the zone's own limit. */
   private renderSoil(zone: ZoneInfo): TemplateResult | typeof nothing {
     const t = this.localize;
-    const sensor = zoneSoilSensor(this.entry, zone);
+    const sensor = zone.soil_sensor;
     if (!sensor) return nothing;
     const value = numberState(this.hass, sensor);
     const limit = numberState(this.hass, zone.entities.soil_max);

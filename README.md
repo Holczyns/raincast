@@ -29,8 +29,8 @@ B-hyve, relays on ESPHome or Shelly devices, and smart plugs alike.
   history, all settings and a built-in guide.
 - **Zones** with any number of valves, their own start, an interval in days, a time per valve and an *under a roof*
   flag for greenhouses and covered beds. Zones starting together run as one; a start during a run waits for it.
-- **Soil per zone**: each zone has its own soil limit and can have its own soil sensor or input number; zones open to
-  the sky without one use the general sensor.
+- **Soil per zone**: each zone can have its own soil sensor or input number and has its own soil limit; a zone without
+  one does not look at the soil.
 - **Rain and frost holds**: a rain forecast sensor for zones open to the sky and an outdoor temperature sensor that
   stops all watering below the frost limit. All inputs are optional.
 - **Season and main switch**: automatic watering only between two months, for example April to October, and a main
@@ -54,7 +54,7 @@ B-hyve, relays on ESPHome or Shelly devices, and smart plugs alike.
 
 - Home Assistant 2026.10 or newer.
 - Valves as `valve`, `switch` or `input_boolean` entities.
-- Optional: soil moisture sensors in %, a rain forecast sensor in mm for the coming day, an outdoor temperature
+- Optional: a soil moisture sensor in % per zone, a rain forecast sensor in mm for the coming day, an outdoor temperature
   sensor, a total water meter in m³ or L, a notify service.
 
 Any sensor works for the weather inputs. Open-Meteo provides both as a model value without hardware, for example
@@ -80,10 +80,10 @@ restart Home Assistant.
 The wizard asks for:
 
 1. **A name** for the controller.
-2. **Weather and water**: the general soil moisture sensor, rain forecast, outdoor temperature and water meter. All
-   optional; everything can be changed later in the panel.
-3. **Zones**: a name, the valves in the order they run, *under a roof*, an own soil sensor, the interval and a
-   starting time per valve. Add as many as you need.
+2. **Weather and water**: rain forecast, outdoor temperature and water meter. All optional; everything can be changed
+   later in the panel.
+3. **Zones**: a name, the valves in the order they run, *under a roof*, a soil sensor, the interval and a starting
+   time per valve. Add as many as you need.
 
 Afterwards open **RainCast** in the sidebar. In **Settings** you set the season, the rain and frost limits, and for
 each zone its start, soil limit, interval and the time and flow limit of each valve; you also add, edit or remove
@@ -112,8 +112,8 @@ plan ─► valve 1 ─► valve 2 ─► … ─► measured time ≥ 90 % ─�
 - **Interval**: a zone is due when its interval in days has passed since the last watering, or when it was never
   watered.
 - **Frost**: below the frost limit no zone is watered by a start or by *Water due zones*.
-- **Soil**: a due zone is held while its soil moisture is above its own limit. The value comes from the zone's own
-  sensor or, for a zone open to the sky, the general one; a roofed zone without its own sensor has none.
+- **Soil**: a due zone with a soil sensor is held while its soil moisture is above its limit; a zone without one
+  does not look at the soil.
 - **Rain**: a due zone open to the sky is held while the rain forecast is above the rain limit.
 - **Missing values**: an input that is not set or has no value holds nothing, so a dead weather service never stops
   the garden from being watered; it is reported after an hour.

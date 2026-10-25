@@ -31,7 +31,7 @@ export class RainCastHistory extends LitElement {
   /** Native graphs: daily water per zone, weather inputs against time, and the valves as a timeline. */
   private async buildCards(): Promise<void> {
     const t = this.localize;
-    const weather = [this.entry.sources.soil_sensor, this.entry.sources.rain_sensor].filter(
+    const weather = [...this.entry.zones.map((zone) => zone.soil_sensor), this.entry.sources.rain_sensor].filter(
       (entity): entity is string => !!entity,
     );
     const valves = this.entry.zones.flatMap((zone) => zone.valves);

@@ -38,7 +38,7 @@ from .problems import notify_services
 
 SOURCE_DOMAINS = ("sensor", "input_number")
 VALVE_DOMAINS = ("valve", "switch", "input_boolean")
-SOURCE_FIELDS = (CONF_SOIL_SENSOR, CONF_RAIN_SENSOR, CONF_OUTDOOR_SENSOR, CONF_WATER_METER)
+SOURCE_FIELDS = (CONF_RAIN_SENSOR, CONF_OUTDOOR_SENSOR, CONF_WATER_METER)
 
 
 @callback
