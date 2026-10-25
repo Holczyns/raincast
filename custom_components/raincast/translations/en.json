@@ -1,0 +1,223 @@
+{
+  "config": {
+    "abort": {
+      "reconfigure_successful": "Settings saved."
+    },
+    "error": {
+      "no_valves": "Pick at least one valve."
+    },
+    "step": {
+      "user": {
+        "title": "New RainCast controller",
+        "description": "RainCast waters your zones one valve after another, at a daily start before sunrise or at a fixed time. Each zone has its own interval; zones open to the sky are held when the soil is wet or rain is coming.\n\nNo valve is opened until you turn on **Valve control**. Until then RainCast only sends the day's plan, so you can compare it with your current setup first.",
+        "data": {
+          "name": "Name"
+        }
+      },
+      "weather": {
+        "title": "Weather",
+        "description": "Both inputs are optional. Without them, or while they have no value, zones are watered by their intervals alone.",
+        "data": {
+          "soil_sensor": "Soil moisture",
+          "rain_sensor": "Rain forecast"
+        },
+        "data_description": {
+          "soil_sensor": "Sensor in %. Zones open to the sky are held while it is above the soil limit. A measured sensor or a model value, such as Open-Meteo soil moisture, both work.",
+          "rain_sensor": "Sensor in mm for the coming day. Zones open to the sky are held while it is above the rain limit."
+        }
+      },
+      "zone": {
+        "title": "Zone",
+        "description": "A zone is watered as one unit: its valves run one after another, each for its own time. The interval and the valve times can be changed later on the zone's device page.",
+        "data": {
+          "name": "Name",
+          "valves": "Valves",
+          "roofed": "Under a roof",
+          "interval": "Water every",
+          "duration": "Time per valve"
+        },
+        "data_description": {
+          "valves": "Valve, switch or input boolean entities, in the order they run.",
+          "roofed": "A greenhouse or a covered bed does not get rain, so the weather does not hold it.",
+          "interval": "Days between waterings.",
+          "duration": "Starting value for every valve of the zone."
+        }
+      },
+      "zones": {
+        "title": "Zones",
+        "description": "Added: {zones}",
+        "menu_options": {
+          "zone": "Add another zone",
+          "finish": "Finish"
+        }
+      },
+      "reconfigure": {
+        "title": "Weather",
+        "description": "Change the weather inputs. Limits and start times are changed on the device page.",
+        "data": {
+          "soil_sensor": "Soil moisture",
+          "rain_sensor": "Rain forecast"
+        }
+      }
+    }
+  },
+  "config_subentries": {
+    "zone": {
+      "entry_type": "Zone",
+      "initiate_flow": {
+        "user": "Add zone",
+        "reconfigure": "Edit zone"
+      },
+      "abort": {
+        "reconfigure_successful": "Zone saved."
+      },
+      "error": {
+        "no_valves": "Pick at least one valve."
+      },
+      "step": {
+        "user": {
+          "title": "New zone",
+          "description": "A zone is watered as one unit: its valves run one after another, each for its own time. The interval and the valve times can be changed later on the zone's device page.",
+          "data": {
+            "name": "Name",
+            "valves": "Valves",
+            "roofed": "Under a roof",
+            "interval": "Water every",
+            "duration": "Time per valve"
+          },
+          "data_description": {
+            "valves": "Valve, switch or input boolean entities, in the order they run.",
+            "roofed": "A greenhouse or a covered bed does not get rain, so the weather does not hold it.",
+            "interval": "Days between waterings.",
+            "duration": "Starting value for every valve of the zone."
+          }
+        },
+        "reconfigure": {
+          "title": "Edit zone",
+          "description": "The interval and the valve times are changed on the zone's device page. A valve added here starts with the zone's starting time.",
+          "data": {
+            "name": "Name",
+            "valves": "Valves",
+            "roofed": "Under a roof"
+          }
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Notifications",
+        "data": {
+          "notify_service": "Notify service"
+        },
+        "data_description": {
+          "notify_service": "Receives the day's plan, the end of every run and problems, for example mobile_app_phone. Leave empty for no notifications."
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "running": {
+        "name": "Watering"
+      },
+      "problem": {
+        "name": "Problem"
+      }
+    },
+    "button": {
+      "run_due": {
+        "name": "Water due zones"
+      },
+      "stop": {
+        "name": "Stop watering"
+      },
+      "zone_run": {
+        "name": "Water now"
+      }
+    },
+    "date": {
+      "zone_last_watered": {
+        "name": "Last watered"
+      }
+    },
+    "number": {
+      "sunrise_offset": {
+        "name": "Start before sunrise"
+      },
+      "soil_max": {
+        "name": "Soil limit"
+      },
+      "rain_max": {
+        "name": "Rain limit"
+      },
+      "zone_interval": {
+        "name": "Interval"
+      },
+      "zone_duration": {
+        "name": "Time {valve}"
+      }
+    },
+    "select": {
+      "start_mode": {
+        "name": "Start",
+        "state": {
+          "before_sunrise": "Before sunrise",
+          "at_time": "At a fixed time",
+          "off": "Off"
+        }
+      }
+    },
+    "sensor": {
+      "next_start": {
+        "name": "Next start"
+      },
+      "planned": {
+        "name": "Planned time"
+      },
+      "zone_status": {
+        "name": "Status",
+        "state": {
+          "watering": "Watering",
+          "due": "Due",
+          "waiting": "Waiting for its interval",
+          "wet_soil": "Held, soil wet",
+          "rain_forecast": "Held, rain forecast",
+          "no_duration": "No valve time"
+        }
+      },
+      "zone_next_due": {
+        "name": "Next due"
+      }
+    },
+    "switch": {
+      "control": {
+        "name": "Valve control"
+      }
+    },
+    "time": {
+      "start_time": {
+        "name": "Start time"
+      }
+    }
+  },
+  "issues": {
+    "valve_unavailable": {
+      "title": "{name}: valve unavailable",
+      "description": "{unavailable} has been unavailable for 30 minutes. Zones with this valve cannot be watered. Check the valve controller and its connection."
+    },
+    "valve_not_opened": {
+      "title": "{name}: valve did not open",
+      "description": "{not_opened} did not report open within a minute of the start command, so the zone was not counted as watered. The issue clears once the valve opens in a later run."
+    },
+    "valve_not_closed": {
+      "title": "{name}: valve still open",
+      "description": "{left_open} still reports open after the stop command. Check the valve; water may be running."
+    },
+    "weather_lost": {
+      "title": "{name}: weather data lost",
+      "description": "{weather} has had no value for an hour. Zones are watered by their intervals alone until it returns."
+    }
+  }
+}

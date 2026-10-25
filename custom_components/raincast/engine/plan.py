@@ -141,9 +141,7 @@ def zone_plan(zone: ZoneConfig, last_watered: date | None, weather: Weather, tod
     )
 
 
-def make_plan(
-    zones: list[ZoneConfig], last_watered: dict[str, date | None], weather: Weather, today: date
-) -> Plan:
+def make_plan(zones: list[ZoneConfig], last_watered: dict[str, date | None], weather: Weather, today: date) -> Plan:
     return Plan(
         zones=tuple(zone_plan(zone, last_watered.get(zone.key), weather, today) for zone in zones),
         soil=weather.soil,
