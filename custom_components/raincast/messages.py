@@ -32,8 +32,10 @@ def _last_watered(zone: ZonePlan) -> str:
 def skip_reason(zone: ZonePlan, plan: Plan, today: datetime) -> str:
     if zone.status is ZoneStatus.WAITING:
         return f"due in {_days((zone.next_due - today.date()).days)}"
+    if zone.status is ZoneStatus.FROST:
+        return f"frost, {plan.outdoor:g} °C below {plan.frost_min:g} °C"
     if zone.status is ZoneStatus.WET_SOIL:
-        return f"soil {plan.soil:g} % above {plan.soil_max:g} %"
+        return f"soil {zone.soil:g} % above {zone.soil_max:g} %"
     if zone.status is ZoneStatus.RAIN_FORECAST:
         return f"{plan.rain:g} mm of rain forecast, limit {plan.rain_max:g} mm"
     return "no valve time set"
@@ -41,8 +43,8 @@ def skip_reason(zone: ZonePlan, plan: Plan, today: datetime) -> str:
 
 def _weather_line(plan: Plan) -> str | None:
     parts = []
-    if plan.soil is not None:
-        parts.append(f"soil {plan.soil:g} %")
+    if plan.outdoor is not None:
+        parts.append(f"outdoor {plan.outdoor:g} °C")
     if plan.rain is not None:
         parts.append(f"rain forecast {plan.rain:g} mm")
     if not parts:
@@ -59,7 +61,8 @@ def plan_message(name: str, plan: Plan, now: datetime, dry_run: bool) -> tuple[s
         lines.append(f"{minutes} min in total, ends about {ends}.")
         for zone in plan.due:
             valves = f", {zone.valve_count} valves" if zone.valve_count > 1 else ""
-            lines.append(f"• {zone.name}: {round(zone.minutes)} min{valves}, {_last_watered(zone)}")
+            soil = f", soil {zone.soil:g} %" if zone.soil is not None else ""
+            lines.append(f"• {zone.name}: {round(zone.minutes)} min{valves}, {_last_watered(zone)}{soil}")
     else:
         title = f"{name}: no watering today"
     if plan.skipped:

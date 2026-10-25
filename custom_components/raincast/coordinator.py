@@ -1,10 +1,12 @@
 """Schedule, watering runs and checks of one RainCast controller.
 
-Once a day, at the start chosen in the settings, the coordinator computes
-the plan, sends it as a notification and, while valve control is on,
-waters the due zones one valve after another. Manual runs go through the
-same queue; only one run is active at a time. The coordinator is the only
-writer of the configured valves.
+Each zone has its own daily start. At a start the coordinator computes the
+plan of the zones starting then, sends it as a notification and, while
+valve control is on, waters the due ones one valve after another. Zones
+starting together run as one; a start during a run waits for it to end.
+Automatic starts happen only while automatic watering is on and in season;
+manual runs are allowed regardless. Only one run is active at a time. The
+coordinator is the only writer of the configured valves.
 
 With a water meter configured, every valve run is metered: the reading
 when a valve starts against the reading when the next one starts, or a
@@ -14,10 +16,12 @@ in the house meanwhile.
 Every minute the plan shown by the entities is computed again and the
 fault conditions are checked.
 
-State kept across restarts (Store): settings, zone intervals, valve
-durations and flow limits, last watering dates, water used per zone,
-valve control, the run log and the valves of a run in progress. A run cut off by a restart is not resumed;
-its valves are closed on the next start. Fault timers are not kept.
+State kept across restarts (Store): controller settings, zone settings
+(start, soil limit, interval, valve durations and flow limits), last
+watering dates, water used per zone, valve control, the run log and the
+valves of a run in progress. A run cut off by a restart is not resumed;
+its valves are closed on the next start. Fault timers and waiting starts
+are not kept.
 """
 
 from __future__ import annotations
@@ -43,6 +47,7 @@ from .const import (
     CHECK_SECONDS,
     CONF_DURATION,
     CONF_INTERVAL,
+    CONF_OUTDOOR_SENSOR,
     CONF_RAIN_SENSOR,
     CONF_ROOFED,
     CONF_SOIL_SENSOR,
@@ -51,17 +56,25 @@ from .const import (
     DEFAULT_DURATION,
     DEFAULT_INTERVAL,
     DEFAULT_SETTINGS,
+    DEFAULT_ZONE_SETTINGS,
     DOMAIN,
     METER_SETTLE_SECONDS,
     METER_STALE_SECONDS,
     NATIVE_START,
     POLL_SECONDS,
     RUN_LOG_SIZE,
+    SEASON_SEARCH_DAYS,
+    SETTING_AUTOMATIC,
+    SETTING_FROST_MIN,
     SETTING_RAIN_MAX,
+    SETTING_SEASON_END,
+    SETTING_SEASON_START,
     SETTING_SOIL_MAX,
     SETTING_START_MODE,
     SETTING_START_TIME,
     SETTING_SUNRISE_OFFSET,
+    START_BATCH_SECONDS,
+    START_SETTINGS,
     STORAGE_VERSION,
     SUBENTRY_ZONE,
 )
@@ -79,6 +92,7 @@ from .engine import (
     Weather,
     ZoneConfig,
     conditions,
+    in_season,
     make_plan,
     meter_liters,
     next_start,
@@ -91,7 +105,6 @@ _LOGGER = logging.getLogger(__name__)
 
 MISSING_STATES = (STATE_UNAVAILABLE, STATE_UNKNOWN)
 OPEN_STATES = ("open", "opening", "on")
-START_SETTINGS = (SETTING_START_MODE, SETTING_START_TIME, SETTING_SUNRISE_OFFSET)
 # Valves of an interrupted run may belong to an integration that is still starting.
 CLOSE_RETRIES = 10
 CLOSE_RETRY_SECONDS = 30
@@ -134,6 +147,11 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
         self.control_active = False
         self.log: list[dict[str, Any]] = []
         self.next_start: datetime | None = None
+        # Next automatic start of each zone; zones without one are left out.
+        self.zone_starts: dict[str, datetime] = {}
+        # Zones starting at next_start, and runs waiting for the current one to end.
+        self._start_batch: list[str] = []
+        self._waiting: list[list[str]] = []
         self.run: RunState | None = None
         self.faults = FaultMonitor()
         self._run_task: asyncio.Task[None] | None = None
@@ -183,6 +201,7 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
                     roofed=bool(subentry.data.get(CONF_ROOFED, False)),
                     interval_days=int(tuning[CONF_INTERVAL]),
                     valves=slots,
+                    soil_max=float(tuning[SETTING_SOIL_MAX]),
                 )
             )
         return configs
@@ -191,7 +210,11 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
 
     async def async_setup(self) -> None:
         stored = await self._store.async_load() or {}
-        self.settings.update({key: value for key, value in stored.get("settings", {}).items() if key in self.settings})
+        stored_settings = stored.get("settings", {})
+        self.settings.update({key: value for key, value in stored_settings.items() if key in self.settings})
+        # Start and soil limit were controller settings before they moved to the zones.
+        zone_defaults = dict(DEFAULT_ZONE_SETTINGS)
+        zone_defaults.update({key: value for key, value in stored_settings.items() if key in zone_defaults})
         self.control_active = stored.get("control_active", False)
         self.log = list(stored.get("log", []))[-RUN_LOG_SIZE:]
         stored_zones = stored.get("zones", {})
@@ -204,6 +227,7 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
             max_flows = dict(tuning.get("max_flows", {}))
             valves = subentry.data.get(CONF_VALVES, [])
             self.zone_tuning[key] = {
+                **{name: tuning.get(name, default) for name, default in zone_defaults.items()},
                 CONF_INTERVAL: tuning.get(CONF_INTERVAL, subentry.data.get(CONF_INTERVAL, DEFAULT_INTERVAL)),
                 # Values of valves no longer in the zone are dropped.
                 "durations": {valve: durations.get(valve, default_duration) for valve in valves},
@@ -249,7 +273,11 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
             "settings": dict(self.settings),
             "control_active": self.control_active,
             "zones": {
-                key: {CONF_INTERVAL: value[CONF_INTERVAL], "durations": dict(value["durations"])}
+                key: {
+                    **value,
+                    "durations": dict(value["durations"]),
+                    "max_flows": dict(value["max_flows"]),
+                }
                 for key, value in self.zone_tuning.items()
             },
             "last_watered": {key: value.isoformat() for key, value in self.last_watered.items() if value},
@@ -260,19 +288,37 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
 
     # Plan inputs
 
-    def _sensor_value(self, key: str) -> float | None:
-        entity_id = self.entry.data.get(key)
+    def _entity_value(self, entity_id: str | None) -> float | None:
         if not entity_id:
             return None
         state = self.hass.states.get(entity_id)
         return _number(state.state) if state else None
 
+    def _sensor_value(self, key: str) -> float | None:
+        return self._entity_value(self.entry.data.get(key))
+
     def weather(self) -> Weather:
         return Weather(
-            soil=self._sensor_value(CONF_SOIL_SENSOR),
             rain=self._sensor_value(CONF_RAIN_SENSOR),
-            soil_max=float(self.settings[SETTING_SOIL_MAX]),
             rain_max=float(self.settings[SETTING_RAIN_MAX]),
+            outdoor=self._sensor_value(CONF_OUTDOOR_SENSOR),
+            frost_min=float(self.settings[SETTING_FROST_MIN]),
+        )
+
+    def soil_sensor(self, zone_key: str) -> str | None:
+        """Sensor a zone is judged on: its own, or the general one for a zone open to the sky."""
+        zone = self.zones[zone_key]
+        own = zone.data.get(CONF_SOIL_SENSOR)
+        if own:
+            return own
+        if zone.data.get(CONF_ROOFED, False):
+            return None
+        return self.entry.data.get(CONF_SOIL_SENSOR)
+
+    @property
+    def in_season(self) -> bool:
+        return in_season(
+            dt_util.now().date(), int(self.settings[SETTING_SEASON_START]), int(self.settings[SETTING_SEASON_END])
         )
 
     def meter_liters(self) -> float | None:
@@ -287,7 +333,8 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
         return meter_liters(_number(state.state), state.attributes.get("unit_of_measurement"))
 
     def _plan(self) -> Plan:
-        return make_plan(self.zone_configs(), self.last_watered, self.weather(), dt_util.now().date())
+        soil = {key: self._entity_value(self.soil_sensor(key)) for key in self.zones}
+        return make_plan(self.zone_configs(), self.last_watered, soil, self.weather(), dt_util.now().date())
 
     @callback
     def async_refresh_plan(self) -> None:
@@ -301,18 +348,48 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
         sunrise = get_astral_event_next(self.hass, "sunrise", dt_util.as_utc(moment))
         return dt_util.as_local(sunrise)
 
+    def _zone_start(self, zone_key: str, now: datetime) -> datetime | None:
+        """Next start of the zone that falls in the season."""
+        tuning = self.zone_tuning[zone_key]
+        first = int(self.settings[SETTING_SEASON_START])
+        last = int(self.settings[SETTING_SEASON_END])
+        moment = now
+        for _day in range(SEASON_SEARCH_DAYS):
+            start = next_start(
+                StartMode(tuning[SETTING_START_MODE]),
+                moment,
+                sunrise_after=self._sunrise_after,
+                offset_h=float(tuning[SETTING_SUNRISE_OFFSET]),
+                at=time.fromisoformat(str(tuning[SETTING_START_TIME])),
+            )
+            if (start is None) or in_season(start.date(), first, last):
+                return start
+            moment = start
+        return None
+
     @callback
     def _schedule_start(self) -> None:
+        """Track the earliest zone start; zones starting within a minute of it go with it."""
         self._cancel_start()
-        self.next_start = next_start(
-            StartMode(self.settings[SETTING_START_MODE]),
-            dt_util.now(),
-            sunrise_after=self._sunrise_after,
-            offset_h=float(self.settings[SETTING_SUNRISE_OFFSET]),
-            at=time.fromisoformat(str(self.settings[SETTING_START_TIME])),
-        )
-        if self.next_start is not None:
-            self._start_unsub = async_track_point_in_time(self.hass, self._async_scheduled_start, self.next_start)
+        self.zone_starts = {}
+        self._start_batch = []
+        self.next_start = None
+        if not self.settings[SETTING_AUTOMATIC]:
+            return
+        now = dt_util.now()
+        for key in self.zones:
+            start = self._zone_start(key, now)
+            if start is not None:
+                self.zone_starts[key] = start
+        if not self.zone_starts:
+            return
+        self.next_start = min(self.zone_starts.values())
+        self._start_batch = [
+            key
+            for key, start in self.zone_starts.items()
+            if (start - self.next_start).total_seconds() < START_BATCH_SECONDS
+        ]
+        self._start_unsub = async_track_point_in_time(self.hass, self._async_scheduled_start, self.next_start)
 
     def _cancel_start(self) -> None:
         if self._start_unsub is not None:
@@ -320,19 +397,24 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
             self._start_unsub = None
 
     async def _async_scheduled_start(self, _now: datetime) -> None:
+        batch = self._start_batch
         self._start_unsub = None
         self._schedule_start()
         plan = self._plan()
         self.async_set_updated_data(plan)
-        if self.running:
-            _LOGGER.warning("%s: scheduled start skipped, a run is still in progress", self.entry.title)
-            return
+        batch_plan = plan.only(batch)
         dry_run = not self.control_active
-        title, message = plan_message(self.entry.title, plan, dt_util.now(), dry_run)
+        title, message = plan_message(self.entry.title, batch_plan, dt_util.now(), dry_run)
         await async_notify(self.hass, self.entry, title, message)
-        if dry_run or not plan.due:
+        if dry_run or not batch_plan.due:
             return
-        self._start_run([zone.key for zone in plan.due], "scheduled")
+        keys = [zone.key for zone in batch_plan.due]
+        if self.running:
+            # Queued: one valve at a time, so this start waits for the run in progress.
+            _LOGGER.info("%s: start of %s waits for the run in progress", self.entry.title, ", ".join(keys))
+            self._waiting.append(keys)
+            return
+        self._start_run(keys, "scheduled")
 
     # Runs
 
@@ -372,7 +454,8 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
         self.async_update_listeners()
 
     async def async_stop(self) -> None:
-        """Cancel the run in progress and close every configured valve."""
+        """Cancel the run in progress and any waiting start, and close every configured valve."""
+        self._waiting.clear()
         if self._run_task is not None:
             self._run_task.cancel()
             await asyncio.wait({self._run_task})
@@ -409,7 +492,7 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
         if minutes is None:
             return zone
         slots = tuple(ValveSlot(slot.entity_id, float(minutes.get(slot.entity_id, 0))) for slot in zone.valves)
-        return ZoneConfig(zone.key, zone.name, zone.roofed, zone.interval_days, slots)
+        return ZoneConfig(zone.key, zone.name, zone.roofed, zone.interval_days, slots, zone.soil_max)
 
     async def _async_water_zone(self, run: RunState, zone: ZoneConfig, reference_s: float) -> None:
         """Water the zone's valves in turn.
@@ -539,6 +622,11 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
         title, message = run_message(self.entry.title, entry, self._friendly_name)
         await async_notify(self.hass, self.entry, title, message)
         await self._async_check(ended)
+        # A start that came during this run goes now; zones removed meanwhile are left out.
+        if self._waiting and self.control_active and not interrupted:
+            keys = [key for key in self._waiting.pop(0) if key in self.zones]
+            if keys:
+                self._start_run(keys, "scheduled")
 
     async def _async_close_interrupted(self, interrupted: dict[str, Any]) -> None:
         valves = list(interrupted.get("valves", []))
@@ -622,10 +710,12 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
             for valve in self.valves
             if (self.hass.states.get(valve) is None) or (self.hass.states.get(valve).state in MISSING_STATES)
         )
+        weather_inputs = [self.entry.data.get(key) for key in (CONF_SOIL_SENSOR, CONF_RAIN_SENSOR, CONF_OUTDOOR_SENSOR)]
+        weather_inputs += [zone.data.get(CONF_SOIL_SENSOR) for zone in self.zones.values()]
         weather_missing = tuple(
-            self.entry.data[key]
-            for key in (CONF_SOIL_SENSOR, CONF_RAIN_SENSOR)
-            if self.entry.data.get(key) and (self._sensor_value(key) is None)
+            dict.fromkeys(
+                entity_id for entity_id in weather_inputs if entity_id and (self._entity_value(entity_id) is None)
+            )
         )
         fault_inputs = FaultInputs(
             unavailable_valves=unavailable,
@@ -653,7 +743,9 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
     async def async_set_control(self, active: bool) -> None:
         self.control_active = active
         self._schedule_save()
-        # Turning control off ends a run in progress and closes its valve.
+        # Turning control off ends a run in progress, closes its valve and drops waiting starts.
+        if not active:
+            self._waiting.clear()
         if (not active) and (self._run_task is not None):
             self._run_task.cancel()
         self.async_update_listeners()
@@ -661,6 +753,13 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
     @callback
     def async_set_setting(self, key: str, value: Any) -> None:
         self.settings[key] = value
+        # The automatic switch and the season decide which starts are tracked.
+        self._schedule_start()
+        self.async_refresh_plan()
+
+    @callback
+    def async_set_zone_setting(self, zone_key: str, key: str, value: Any) -> None:
+        self.zone_tuning[zone_key][key] = value
         if key in START_SETTINGS:
             self._schedule_start()
         self.async_refresh_plan()

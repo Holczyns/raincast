@@ -2,7 +2,7 @@
 
 from .faults import DELAYS, Fault, FaultInputs, FaultMonitor, conditions
 from .plan import Plan, ValveSlot, Weather, ZoneConfig, ZonePlan, ZoneStatus, make_plan, weather_hold, zone_plan
-from .schedule import StartMode, next_start
+from .schedule import StartMode, in_season, next_start
 from .valve import Command, Outcome, ValveRun, zone_watered
 from .water import FlowFault, ValveWater, meter_liters
 
@@ -24,6 +24,7 @@ __all__ = [
     "ZonePlan",
     "ZoneStatus",
     "conditions",
+    "in_season",
     "make_plan",
     "meter_liters",
     "next_start",

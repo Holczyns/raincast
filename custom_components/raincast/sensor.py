@@ -30,6 +30,7 @@ async def async_setup_entry(
         entities: list[SensorEntity] = [
             ZoneStatusSensor(coordinator, zone, "status"),
             NextDueSensor(coordinator, zone, "next_due"),
+            ZoneNextStartSensor(coordinator, zone, "next_start"),
         ]
         if metered:
             entities.append(WaterUsedSensor(coordinator, zone, "water_used"))
@@ -105,3 +106,13 @@ class WaterUsedSensor(RainCastZoneEntity, SensorEntity):
     @property
     def native_value(self) -> float:
         return round(self.coordinator.water_totals.get(self.zone_key, 0.0), 1)
+
+
+class ZoneNextStartSensor(RainCastZoneEntity, SensorEntity):
+    """Next automatic start of the zone; none while automatic watering is off or the start is off."""
+
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    @property
+    def native_value(self) -> datetime | None:
+        return self.coordinator.zone_starts.get(self.zone_key)

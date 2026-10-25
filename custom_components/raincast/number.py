@@ -1,10 +1,17 @@
-"""Weather limits, sunrise offset, zone intervals, valve durations and valve flow limits."""
+"""Rain and frost limits; per zone the start offset, soil limit, interval, valve times and flow limits."""
 
 from __future__ import annotations
 
 from homeassistant.components.number import NumberEntity, NumberEntityDescription, NumberMode
 from homeassistant.config_entries import ConfigSubentry
-from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfLength, UnitOfTime, UnitOfVolumeFlowRate
+from homeassistant.const import (
+    PERCENTAGE,
+    EntityCategory,
+    UnitOfLength,
+    UnitOfTemperature,
+    UnitOfTime,
+    UnitOfVolumeFlowRate,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
@@ -13,8 +20,10 @@ from . import RainCastConfigEntry
 from .const import (
     CONF_INTERVAL,
     CONF_MAX_FLOW,
+    CONF_OUTDOOR_SENSOR,
     CONF_VALVES,
     CONF_WATER_METER,
+    SETTING_FROST_MIN,
     SETTING_RAIN_MAX,
     SETTING_SOIL_MAX,
     SETTING_SUNRISE_OFFSET,
@@ -37,10 +46,11 @@ def _number(key: str, minimum: float, maximum: float, step: float, unit: str | N
     )
 
 
-SETTINGS: tuple[NumberEntityDescription, ...] = (
+RAIN_MAX = _number(SETTING_RAIN_MAX, 0, 50, 0.5, UnitOfLength.MILLIMETERS)
+FROST_MIN = _number(SETTING_FROST_MIN, -10, 15, 0.5, UnitOfTemperature.CELSIUS)
+ZONE_SETTINGS: tuple[NumberEntityDescription, ...] = (
     _number(SETTING_SUNRISE_OFFSET, 0, 6, 0.25, UnitOfTime.HOURS),
     _number(SETTING_SOIL_MAX, 0, 100, 1, PERCENTAGE),
-    _number(SETTING_RAIN_MAX, 0, 50, 0.5, UnitOfLength.MILLIMETERS),
 )
 INTERVAL = _number(CONF_INTERVAL, 1, 30, 1, UnitOfTime.DAYS)
 DURATION = _number("duration", 0, 240, 1, UnitOfTime.MINUTES)
@@ -69,9 +79,14 @@ async def async_setup_entry(
 ) -> None:
     coordinator = entry.runtime_data
     metered = bool(entry.data.get(CONF_WATER_METER))
-    async_add_entities(SettingNumber(coordinator, description) for description in SETTINGS)
+    controller: list[NumberEntity] = [SettingNumber(coordinator, RAIN_MAX)]
+    # The frost limit needs an outdoor sensor to be checked against.
+    if entry.data.get(CONF_OUTDOOR_SENSOR):
+        controller.append(SettingNumber(coordinator, FROST_MIN))
+    async_add_entities(controller)
     for zone in coordinator.zones.values():
         entities: list[NumberEntity] = [IntervalNumber(coordinator, zone, INTERVAL)]
+        entities += [ZoneSettingNumber(coordinator, zone, description) for description in ZONE_SETTINGS]
         for index, valve in enumerate(zone.data.get(CONF_VALVES, [])):
             name = _valve_name(hass, valve)
             entities.append(DurationNumber(coordinator, zone, index, valve, name))
@@ -154,3 +169,22 @@ class MaxFlowNumber(RainCastZoneEntity, NumberEntity):
 
     async def async_set_native_value(self, value: float) -> None:
         self.coordinator.async_set_max_flow(self.zone_key, self.valve, value)
+
+
+class ZoneSettingNumber(RainCastZoneEntity, NumberEntity):
+    """Start offset before sunrise or soil limit of one zone."""
+
+    entity_description: NumberEntityDescription
+
+    def __init__(
+        self, coordinator: RainCastCoordinator, zone: ConfigSubentry, description: NumberEntityDescription
+    ) -> None:
+        super().__init__(coordinator, zone, description.key)
+        self.entity_description = description
+
+    @property
+    def native_value(self) -> float:
+        return float(self.coordinator.zone_tuning[self.zone_key][self.entity_description.key])
+
+    async def async_set_native_value(self, value: float) -> None:
+        self.coordinator.async_set_zone_setting(self.zone_key, self.entity_description.key, value)

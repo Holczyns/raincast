@@ -54,7 +54,7 @@ MESSAGES: dict[Fault, str] = {
         "{flow_high} was closed: its flow was above the limit set for it. Check for a broken pipe or sprinkler."
     ),
     Fault.WEATHER_LOST: (
-        "{weather} has had no value for an hour. Zones are watered by their intervals alone until it returns."
+        "{weather} has had no value for an hour. Watering goes on without the holds it gives until it returns."
     ),
 }
 

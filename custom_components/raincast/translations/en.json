@@ -20,12 +20,14 @@
         "data": {
           "soil_sensor": "Soil moisture",
           "rain_sensor": "Rain forecast",
-          "water_meter": "Water meter"
+          "water_meter": "Water meter",
+          "outdoor_sensor": "Outdoor temperature"
         },
         "data_description": {
-          "soil_sensor": "Sensor in %. Zones open to the sky are held while it is above the soil limit. A measured sensor or a model value, such as Open-Meteo soil moisture, both work.",
+          "soil_sensor": "Sensor in %, used by every zone open to the sky that has no sensor of its own. A measured sensor or a model value, such as Open-Meteo soil moisture, both work.",
           "rain_sensor": "Sensor in mm for the coming day. Zones open to the sky are held while it is above the rain limit.",
-          "water_meter": "Total water sensor, in m³ or L. RainCast meters every valve run, finds valves open without water and closes a valve whose flow is above its limit. A meter shared with the house also counts water used there meanwhile."
+          "water_meter": "Total water sensor, in m³ or L. RainCast meters every valve run, finds valves open without water and closes a valve whose flow is above its limit. A meter shared with the house also counts water used there meanwhile.",
+          "outdoor_sensor": "No zone is watered while it is below the frost limit, so water does not freeze in pipes and heads."
         }
       },
       "zone": {
@@ -36,13 +38,15 @@
           "valves": "Valves",
           "roofed": "Under a roof",
           "interval": "Water every",
-          "duration": "Time per valve"
+          "duration": "Time per valve",
+          "soil_sensor": "Soil moisture of this zone"
         },
         "data_description": {
           "valves": "Valve, switch or input boolean entities, in the order they run.",
-          "roofed": "A greenhouse or a covered bed does not get rain, so the weather does not hold it.",
+          "roofed": "A greenhouse or a covered bed does not get rain, so the rain forecast does not hold it.",
           "interval": "Days between waterings.",
-          "duration": "Starting value for every valve of the zone."
+          "duration": "Starting value for every valve of the zone.",
+          "soil_sensor": "Optional, sensor or input number in %. Without it a zone open to the sky uses the general soil sensor and a zone under a roof none. The limit is set per zone."
         }
       },
       "zones": {
@@ -59,7 +63,8 @@
         "data": {
           "soil_sensor": "Soil moisture",
           "rain_sensor": "Rain forecast",
-          "water_meter": "Water meter"
+          "water_meter": "Water meter",
+          "outdoor_sensor": "Outdoor temperature"
         }
       }
     }
@@ -86,13 +91,15 @@
             "valves": "Valves",
             "roofed": "Under a roof",
             "interval": "Water every",
-            "duration": "Time per valve"
+            "duration": "Time per valve",
+            "soil_sensor": "Soil moisture of this zone"
           },
           "data_description": {
             "valves": "Valve, switch or input boolean entities, in the order they run.",
-            "roofed": "A greenhouse or a covered bed does not get rain, so the weather does not hold it.",
+            "roofed": "A greenhouse or a covered bed does not get rain, so the rain forecast does not hold it.",
             "interval": "Days between waterings.",
-            "duration": "Starting value for every valve of the zone."
+            "duration": "Starting value for every valve of the zone.",
+            "soil_sensor": "Optional, sensor or input number in %. Without it a zone open to the sky uses the general soil sensor and a zone under a roof none. The limit is set per zone."
           }
         },
         "reconfigure": {
@@ -101,7 +108,11 @@
           "data": {
             "name": "Name",
             "valves": "Valves",
-            "roofed": "Under a roof"
+            "roofed": "Under a roof",
+            "soil_sensor": "Soil moisture of this zone"
+          },
+          "data_description": {
+            "soil_sensor": "Optional, sensor or input number in %. Without it a zone open to the sky uses the general soil sensor and a zone under a roof none. The limit is set per zone."
           }
         }
       }
@@ -146,12 +157,6 @@
       }
     },
     "number": {
-      "sunrise_offset": {
-        "name": "Start before sunrise"
-      },
-      "soil_max": {
-        "name": "Soil limit"
-      },
       "rain_max": {
         "name": "Rain limit"
       },
@@ -163,15 +168,58 @@
       },
       "zone_max_flow": {
         "name": "Max flow {valve}"
+      },
+      "zone_soil_max": {
+        "name": "Soil limit"
+      },
+      "zone_sunrise_offset": {
+        "name": "Start before sunrise"
+      },
+      "frost_min": {
+        "name": "Frost limit"
       }
     },
     "select": {
-      "start_mode": {
+      "zone_start_mode": {
         "name": "Start",
         "state": {
           "before_sunrise": "Before sunrise",
           "at_time": "At a fixed time",
           "off": "Off"
+        }
+      },
+      "season_start": {
+        "name": "Season starts",
+        "state": {
+          "1": "January",
+          "2": "February",
+          "3": "March",
+          "4": "April",
+          "5": "May",
+          "6": "June",
+          "7": "July",
+          "8": "August",
+          "9": "September",
+          "10": "October",
+          "11": "November",
+          "12": "December"
+        }
+      },
+      "season_end": {
+        "name": "Season ends",
+        "state": {
+          "1": "January",
+          "2": "February",
+          "3": "March",
+          "4": "April",
+          "5": "May",
+          "6": "June",
+          "7": "July",
+          "8": "August",
+          "9": "September",
+          "10": "October",
+          "11": "November",
+          "12": "December"
         }
       }
     },
@@ -190,7 +238,8 @@
           "waiting": "Waiting for its interval",
           "wet_soil": "Held, soil wet",
           "rain_forecast": "Held, rain forecast",
-          "no_duration": "No valve time"
+          "no_duration": "No valve time",
+          "frost": "Held, frost"
         }
       },
       "zone_next_due": {
@@ -198,15 +247,21 @@
       },
       "zone_water_used": {
         "name": "Water used"
+      },
+      "zone_next_start": {
+        "name": "Next start"
       }
     },
     "switch": {
       "control": {
         "name": "Valve control"
+      },
+      "automatic": {
+        "name": "Automatic watering"
       }
     },
     "time": {
-      "start_time": {
+      "zone_start_time": {
         "name": "Start time"
       }
     }
@@ -226,7 +281,7 @@
     },
     "weather_lost": {
       "title": "{name}: weather data lost",
-      "description": "{weather} has had no value for an hour. Zones are watered by their intervals alone until it returns."
+      "description": "{weather} has had no value for an hour. Watering goes on without the holds it gives until it returns."
     },
     "no_flow": {
       "title": "{name}: no water through the valve",

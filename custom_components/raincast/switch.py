@@ -1,4 +1,4 @@
-"""Valve control on/off."""
+"""Valve control and automatic watering on/off."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import RainCastConfigEntry
+from .const import SETTING_AUTOMATIC
 from .entity import RainCastEntity
 
 
@@ -17,7 +18,8 @@ async def async_setup_entry(
     entry: RainCastConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    async_add_entities([ControlSwitch(entry.runtime_data, "control")])
+    coordinator = entry.runtime_data
+    async_add_entities([ControlSwitch(coordinator, "control"), AutomaticSwitch(coordinator, SETTING_AUTOMATIC)])
 
 
 class ControlSwitch(RainCastEntity, SwitchEntity):
@@ -32,3 +34,17 @@ class ControlSwitch(RainCastEntity, SwitchEntity):
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         await self.coordinator.async_set_control(False)
+
+
+class AutomaticSwitch(RainCastEntity, SwitchEntity):
+    """Main switch of the daily starts; off, only manual runs water."""
+
+    @property
+    def is_on(self) -> bool:
+        return bool(self.coordinator.settings[SETTING_AUTOMATIC])
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        self.coordinator.async_set_setting(SETTING_AUTOMATIC, True)
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        self.coordinator.async_set_setting(SETTING_AUTOMATIC, False)

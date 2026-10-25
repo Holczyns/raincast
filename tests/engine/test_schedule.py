@@ -1,7 +1,7 @@
-from datetime import datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
-from engine.schedule import StartMode, next_start
+from engine.schedule import StartMode, in_season, next_start
 
 WARSAW = ZoneInfo("Europe/Warsaw")
 
@@ -51,3 +51,16 @@ def test_fixed_time_keeps_local_time_across_dst():
 
 def test_off_has_no_start():
     assert start(StartMode.OFF, datetime(2026, 6, 10, 1, 0, tzinfo=WARSAW)) is None
+
+
+def test_season_within_a_year():
+    assert in_season(date(2026, 4, 1), 4, 10)
+    assert in_season(date(2026, 10, 31), 4, 10)
+    assert not in_season(date(2026, 11, 1), 4, 10)
+    assert not in_season(date(2026, 3, 31), 4, 10)
+
+
+def test_season_over_the_new_year():
+    assert in_season(date(2026, 12, 15), 10, 3)
+    assert in_season(date(2027, 2, 1), 10, 3)
+    assert not in_season(date(2026, 6, 1), 10, 3)

@@ -32,6 +32,7 @@ from .const import (
     CONF_DURATION,
     CONF_INTERVAL,
     CONF_NOTIFY_SERVICE,
+    CONF_OUTDOOR_SENSOR,
     CONF_RAIN_SENSOR,
     CONF_ROOFED,
     CONF_SOIL_SENSOR,
@@ -46,7 +47,7 @@ from .const import (
 from .problems import notify_services
 
 VALVE_DOMAINS = ["valve", "switch", "input_boolean"]
-WEATHER_KEYS = (CONF_SOIL_SENSOR, CONF_RAIN_SENSOR, CONF_WATER_METER)
+WEATHER_KEYS = (CONF_SOIL_SENSOR, CONF_RAIN_SENSOR, CONF_OUTDOOR_SENSOR, CONF_WATER_METER)
 
 
 def _number(minimum: float, maximum: float, step: float, unit: str) -> NumberSelector:
@@ -66,10 +67,12 @@ def _optional(key: str, defaults: dict[str, Any]) -> probatio.Optional:
 def weather_schema(defaults: dict[str, Any]) -> probatio.Schema:
     sensor = EntitySelector(EntitySelectorConfig(filter={"domain": ["sensor", "input_number"]}))
     meter = EntitySelector(EntitySelectorConfig(filter={"domain": "sensor", "device_class": "water"}))
+    temperature = EntitySelector(EntitySelectorConfig(filter={"domain": "sensor", "device_class": "temperature"}))
     return probatio.Schema(
         {
             _optional(CONF_SOIL_SENSOR, defaults): sensor,
             _optional(CONF_RAIN_SENSOR, defaults): sensor,
+            _optional(CONF_OUTDOOR_SENSOR, defaults): temperature,
             _optional(CONF_WATER_METER, defaults): meter,
         }
     )
@@ -82,6 +85,9 @@ def zone_schema(defaults: dict[str, Any], with_tuning: bool) -> probatio.Schema:
             EntitySelectorConfig(filter={"domain": VALVE_DOMAINS}, multiple=True)
         ),
         probatio.Required(CONF_ROOFED, default=defaults.get(CONF_ROOFED, False)): bool,
+        _optional(CONF_SOIL_SENSOR, defaults): EntitySelector(
+            EntitySelectorConfig(filter={"domain": ["sensor", "input_number"]})
+        ),
     }
     if with_tuning:
         fields[probatio.Required(CONF_INTERVAL, default=DEFAULT_INTERVAL)] = _number(1, 30, 1, "d")

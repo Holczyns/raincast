@@ -429,3 +429,99 @@ async def test_valve_above_its_flow_limit_is_closed(hass: HomeAssistant, garden,
     assert zone["valves"][0]["minutes"] < 4
     assert ir.async_get(hass).async_get_issue(DOMAIN, f"{entry.entry_id}_flow_high") is not None
     assert "Garden: flow too high" in [call.data["title"] for call in notifications]
+
+
+async def test_zone_soil_sensor_and_limit_override_the_general_ones(hass: HomeAssistant, garden) -> None:
+    entry = await run_wizard(hass)
+    [zone_id] = entry.subentries
+    hass.states.async_set("sensor.greenhouse_soil", "40.0", {"unit_of_measurement": "%"})
+    hass.config_entries.async_update_subentry(
+        entry,
+        entry.subentries[zone_id],
+        data={**entry.subentries[zone_id].data, "soil_sensor": "sensor.greenhouse_soil"},
+    )
+    await hass.async_block_till_done()
+    status = entity_id(hass, "sensor", "_status")
+    assert hass.states.get(status).state == "wet_soil"
+    await hass.services.async_call(
+        "number", "set_value", {"entity_id": entity_id(hass, "number", "_soil_max"), "value": 45}, blocking=True
+    )
+    assert hass.states.get(status).state == "due"
+
+
+async def test_frost_holds_the_zone(hass: HomeAssistant, garden) -> None:
+    entry = await run_wizard(hass)
+    hass.states.async_set("sensor.outdoor", "1.0", {"unit_of_measurement": "°C", "device_class": "temperature"})
+    hass.config_entries.async_update_entry(entry, data={**entry.data, "outdoor_sensor": "sensor.outdoor"})
+    await hass.async_block_till_done()
+    assert hass.states.get(entity_id(hass, "sensor", "_status")).state == "frost"
+    assert hass.states.get(entity_id(hass, "number", "_frost_min")).state == "3.0"
+
+
+async def set_start(hass: HomeAssistant, start) -> None:
+    await hass.services.async_call(
+        "time",
+        "set_value",
+        {"entity_id": entity_id(hass, "time", "_start_time"), "time": start.strftime("%H:%M:%S")},
+        blocking=True,
+    )
+    await hass.services.async_call(
+        "select",
+        "select_option",
+        {"entity_id": entity_id(hass, "select", "_start_mode"), "option": "at_time"},
+        blocking=True,
+    )
+
+
+async def test_automatic_switch_off_means_no_start(hass: HomeAssistant, garden, notifications, freezer) -> None:
+    entry = await run_wizard(hass)
+    start = (dt_util.now() + timedelta(minutes=2)).replace(second=0, microsecond=0)
+    await set_start(hass, start)
+    next_start = entity_id(hass, "sensor", f"{entry.entry_id}_next_start")
+    assert hass.states.get(next_start).state != "unknown"
+    await hass.services.async_call(
+        "switch", "turn_off", {"entity_id": entity_id(hass, "switch", "_automatic")}, blocking=True
+    )
+    assert hass.states.get(next_start).state == "unknown"
+    freezer.move_to(start + timedelta(seconds=1))
+    async_fire_time_changed(hass, start + timedelta(seconds=1))
+    await hass.async_block_till_done()
+    assert notifications == []
+
+
+async def test_no_start_out_of_season(hass: HomeAssistant, garden) -> None:
+    entry = await run_wizard(hass)
+    month = dt_util.now().month
+    other = month % 12 + 1
+    for key, value in (("_season_start", other), ("_season_end", other)):
+        await hass.services.async_call(
+            "select",
+            "select_option",
+            {"entity_id": entity_id(hass, "select", key), "option": str(value)},
+            blocking=True,
+        )
+    coordinator = entry.runtime_data
+    assert not coordinator.in_season
+    # The next start moves to the first day of the season.
+    assert coordinator.next_start.month == other
+
+
+async def test_start_during_a_run_waits_for_it(hass: HomeAssistant, garden, notifications, freezer) -> None:
+    await run_wizard(hass)
+    await hass.services.async_call(
+        "switch", "turn_on", {"entity_id": entity_id(hass, "switch", "_control")}, blocking=True
+    )
+    start = (dt_util.now() + timedelta(minutes=2)).replace(second=0, microsecond=0)
+    await set_start(hass, start)
+    # A manual run of a minute per valve is still going when the start comes.
+    freezer.move_to(start - timedelta(seconds=30))
+    await hass.services.async_call("button", "press", {"entity_id": entity_id(hass, "button", "_run")}, blocking=True)
+    await advance(hass, freezer, 10)
+    async_fire_time_changed(hass, start + timedelta(seconds=1))
+    await hass.async_block_till_done()
+    assert notifications[-1].data["title"] == "Garden: watering plan"
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    assert entry.runtime_data.run.reason == "zone"
+    await advance(hass, freezer, 150)
+    assert entry.runtime_data.run is not None
+    assert entry.runtime_data.run.reason == "scheduled"

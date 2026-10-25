@@ -6,9 +6,10 @@ from typing import Final
 
 DOMAIN: Final = "raincast"
 
-# Main entry: optional weather inputs
+# Main entry: optional weather inputs; a zone may have its own soil sensor
 CONF_SOIL_SENSOR: Final = "soil_sensor"
 CONF_RAIN_SENSOR: Final = "rain_sensor"
+CONF_OUTDOOR_SENSOR: Final = "outdoor_sensor"
 # Main entry: optional water meter, read while valves are open
 CONF_WATER_METER: Final = "water_meter"
 # Option: notify service (without the "notify." prefix) told about plans, runs and faults.
@@ -26,20 +27,38 @@ DEFAULT_NAME: Final = "RainCast"
 DEFAULT_INTERVAL: Final = 3
 DEFAULT_DURATION: Final = 15.0
 
-# Settings kept in the store and exposed as entities.
+# Settings of the controller, kept in the store and exposed as entities.
+SETTING_AUTOMATIC: Final = "automatic"
+SETTING_RAIN_MAX: Final = "rain_max"
+SETTING_FROST_MIN: Final = "frost_min"
+SETTING_SEASON_START: Final = "season_start"
+SETTING_SEASON_END: Final = "season_end"
+
+DEFAULT_SETTINGS: Final[dict[str, bool | float | int]] = {
+    SETTING_AUTOMATIC: True,
+    SETTING_RAIN_MAX: 4.0,
+    SETTING_FROST_MIN: 3.0,
+    SETTING_SEASON_START: 4,
+    SETTING_SEASON_END: 10,
+}
+
+# Settings of each zone, kept in the store and exposed as entities.
 SETTING_START_MODE: Final = "start_mode"
 SETTING_START_TIME: Final = "start_time"
 SETTING_SUNRISE_OFFSET: Final = "sunrise_offset"
 SETTING_SOIL_MAX: Final = "soil_max"
-SETTING_RAIN_MAX: Final = "rain_max"
 
-DEFAULT_SETTINGS: Final[dict[str, str | float]] = {
+DEFAULT_ZONE_SETTINGS: Final[dict[str, str | float]] = {
     SETTING_START_MODE: "before_sunrise",
     SETTING_START_TIME: "06:00:00",
     SETTING_SUNRISE_OFFSET: 2.0,
     SETTING_SOIL_MAX: 26.0,
-    SETTING_RAIN_MAX: 4.0,
 }
+START_SETTINGS: Final = (SETTING_START_MODE, SETTING_START_TIME, SETTING_SUNRISE_OFFSET)
+# Starts this close together run as one.
+START_BATCH_SECONDS: Final = 60
+# A season shorter than a year leaves days without a start; the search stops after a year.
+SEASON_SEARCH_DAYS: Final = 370
 
 # Valve state is polled while it waters.
 POLL_SECONDS: Final = 5

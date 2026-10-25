@@ -23,6 +23,7 @@ from .const import (
     CONF_DURATION,
     CONF_INTERVAL,
     CONF_NOTIFY_SERVICE,
+    CONF_OUTDOOR_SENSOR,
     CONF_RAIN_SENSOR,
     CONF_ROOFED,
     CONF_SOIL_SENSOR,
@@ -37,7 +38,7 @@ from .problems import notify_services
 
 SOURCE_DOMAINS = ("sensor", "input_number")
 VALVE_DOMAINS = ("valve", "switch", "input_boolean")
-SOURCE_FIELDS = (CONF_SOIL_SENSOR, CONF_RAIN_SENSOR, CONF_WATER_METER)
+SOURCE_FIELDS = (CONF_SOIL_SENSOR, CONF_RAIN_SENSOR, CONF_OUTDOOR_SENSOR, CONF_WATER_METER)
 
 
 @callback
@@ -63,6 +64,7 @@ def _describe(hass: HomeAssistant, entry: ConfigEntry) -> dict[str, Any]:
             "name": subentry.title,
             "valves": list(subentry.data.get(CONF_VALVES, [])),
             "roofed": bool(subentry.data.get(CONF_ROOFED, False)),
+            "soil_sensor": subentry.data.get(CONF_SOIL_SENSOR),
             "entities": {},
         }
         for subentry_id, subentry in entry.subentries.items()
@@ -129,6 +131,14 @@ def _valve_errors(hass: HomeAssistant, valves: list[str]) -> list[str]:
 ENTITY_VALUE = probatio.Any(str, None)
 
 
+def _zone_errors(hass: HomeAssistant, msg: dict[str, Any]) -> list[str]:
+    errors = _valve_errors(hass, msg[CONF_VALVES])
+    soil_sensor = msg.get(CONF_SOIL_SENSOR)
+    if soil_sensor and (error := _entity_error(hass, soil_sensor, SOURCE_DOMAINS)):
+        errors.append(error)
+    return errors
+
+
 @websocket_api.websocket_command({probatio.Required("type"): "raincast/entries"})
 @callback
 def ws_entries(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
@@ -192,6 +202,7 @@ ZONE_SCHEMA = {
     probatio.Required("name"): probatio.All(str, probatio.Length(min=1, max=60)),
     probatio.Required(CONF_VALVES): [str],
     probatio.Required(CONF_ROOFED): bool,
+    probatio.Optional(CONF_SOIL_SENSOR): ENTITY_VALUE,
 }
 
 
@@ -213,11 +224,13 @@ def ws_add_zone(hass: HomeAssistant, connection: websocket_api.ActiveConnection,
     entry = _entry(hass, connection, msg)
     if entry is None:
         return
-    errors = _valve_errors(hass, msg[CONF_VALVES])
+    errors = _zone_errors(hass, msg)
     if errors:
         connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "; ".join(errors))
         return
     data = {key: msg[key] for key in (CONF_VALVES, CONF_ROOFED, CONF_INTERVAL, CONF_DURATION)}
+    if msg.get(CONF_SOIL_SENSOR):
+        data[CONF_SOIL_SENSOR] = msg[CONF_SOIL_SENSOR]
     subentry = ConfigSubentry(
         data=MappingProxyType(data), subentry_type=SUBENTRY_ZONE, title=msg["name"].strip(), unique_id=None
     )
@@ -239,11 +252,14 @@ def ws_update_zone(hass: HomeAssistant, connection: websocket_api.ActiveConnecti
     if subentry is None:
         connection.send_error(msg["id"], websocket_api.ERR_NOT_FOUND, "Unknown zone")
         return
-    errors = _valve_errors(hass, msg[CONF_VALVES])
+    errors = _zone_errors(hass, msg)
     if errors:
         connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "; ".join(errors))
         return
-    data = {**subentry.data, CONF_VALVES: msg[CONF_VALVES], CONF_ROOFED: msg[CONF_ROOFED]}
+    data = {key: value for key, value in subentry.data.items() if key != CONF_SOIL_SENSOR}
+    data.update({CONF_VALVES: msg[CONF_VALVES], CONF_ROOFED: msg[CONF_ROOFED]})
+    if msg.get(CONF_SOIL_SENSOR):
+        data[CONF_SOIL_SENSOR] = msg[CONF_SOIL_SENSOR]
     hass.config_entries.async_update_subentry(entry, subentry, data=data, title=msg["name"].strip())
     connection.send_result(msg["id"])
 

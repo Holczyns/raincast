@@ -7,9 +7,10 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.typing import ConfigType
 
-from .const import DOMAIN
+from .const import CONF_OUTDOOR_SENSOR, CONF_WATER_METER, DOMAIN
 from .coordinator import RainCastCoordinator
 from .entity import controller_device_info
 from .frontend import async_register_frontend
@@ -44,6 +45,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: RainCastConfigEntry) -> 
     controller = dr.async_get(hass).async_get_or_create(config_entry_id=entry.entry_id, **controller_device_info(entry))
     coordinator.device_id = controller.id
     await coordinator.async_setup()
+    _remove_stale_entities(hass, entry)
     entry.runtime_data = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     # Adding, editing or removing a zone changes the entity set.
@@ -60,6 +62,19 @@ async def async_unload_entry(hass: HomeAssistant, entry: RainCastConfigEntry) ->
 
 async def async_remove_entry(hass: HomeAssistant, entry: RainCastConfigEntry) -> None:
     async_clear_issues(hass, entry)
+
+
+def _remove_stale_entities(hass: HomeAssistant, entry: RainCastConfigEntry) -> None:
+    """Entities of moved settings, and of a meter or outdoor sensor no longer set, leave the registry."""
+    stale = {f"{entry.entry_id}_{key}" for key in ("start_mode", "start_time", "sunrise_offset", "soil_max")}
+    if not entry.data.get(CONF_OUTDOOR_SENSOR):
+        stale.add(f"{entry.entry_id}_frost_min")
+    metered = bool(entry.data.get(CONF_WATER_METER))
+    registry = er.async_get(hass)
+    for entity in er.async_entries_for_config_entry(registry, entry.entry_id):
+        meter_entity = ("_max_flow_" in entity.unique_id) or entity.unique_id.endswith("_water_used")
+        if (entity.unique_id in stale) or (meter_entity and not metered):
+            registry.async_remove(entity.entity_id)
 
 
 async def _async_reload(hass: HomeAssistant, entry: RainCastConfigEntry) -> None:

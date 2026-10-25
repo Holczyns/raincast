@@ -1,14 +1,15 @@
-"""When the next scheduled watering starts.
+"""When a zone starts, and whether automatic watering is in season.
 
 Two modes start once a day: a number of hours before sunrise, or at a
 fixed local time. A start that falls on the current moment or earlier
-moves to the next day. Nothing is kept between calls.
+moves to the next day. The season is a range of months, inclusive, and
+may run over the new year. Nothing is kept between calls.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
 from enum import StrEnum
 
 
@@ -42,3 +43,10 @@ def next_start(
         return sunrise - offset
 
     return None
+
+
+def in_season(day: date, first_month: int, last_month: int) -> bool:
+    """Whether the day falls in the season; first 10 and last 3 is October to March."""
+    if first_month <= last_month:
+        return first_month <= day.month <= last_month
+    return (day.month >= first_month) or (day.month <= last_month)
