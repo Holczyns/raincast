@@ -193,6 +193,52 @@ async def test_turning_control_off_stops_the_run(hass: HomeAssistant, garden, fr
     assert hass.states.get(entity_id(hass, "date", "_last_watered")).state == "unknown"
 
 
+async def test_stop_button_ends_the_run(hass: HomeAssistant, garden, freezer) -> None:
+    await run_wizard(hass)
+    await hass.services.async_call(
+        "switch", "turn_on", {"entity_id": entity_id(hass, "switch", "_control")}, blocking=True
+    )
+    await hass.services.async_call(
+        "button", "press", {"entity_id": entity_id(hass, "button", "_run_due")}, blocking=True
+    )
+    await advance(hass, freezer, 10)
+    assert hass.states.get(VALVE_1).state == "on"
+    await hass.services.async_call("button", "press", {"entity_id": entity_id(hass, "button", "_stop")}, blocking=True)
+    await hass.async_block_till_done()
+    assert hass.states.get(VALVE_1).state == "off"
+    assert hass.states.get(VALVE_2).state == "off"
+    assert hass.states.get(entity_id(hass, "binary_sensor", "_running")).state == "off"
+    assert hass.config_entries.async_entries(DOMAIN)[0].runtime_data._save_data()["active_run"] is None
+
+
+async def test_scheduled_start_waters_with_control_on(hass: HomeAssistant, garden, notifications, freezer) -> None:
+    await run_wizard(hass)
+    await hass.services.async_call(
+        "switch", "turn_on", {"entity_id": entity_id(hass, "switch", "_control")}, blocking=True
+    )
+    start = (dt_util.now() + timedelta(minutes=2)).replace(second=0, microsecond=0)
+    await hass.services.async_call(
+        "time",
+        "set_value",
+        {"entity_id": entity_id(hass, "time", "_start_time"), "time": start.strftime("%H:%M:%S")},
+        blocking=True,
+    )
+    await hass.services.async_call(
+        "select",
+        "select_option",
+        {"entity_id": entity_id(hass, "select", "_start_mode"), "option": "at_time"},
+        blocking=True,
+    )
+    freezer.move_to(start + timedelta(seconds=1))
+    async_fire_time_changed(hass, start + timedelta(seconds=1))
+    await hass.async_block_till_done()
+    await advance(hass, freezer, 10)
+    assert notifications[0].data["title"] == "Garden: watering plan"
+    assert hass.states.get(VALVE_1).state == "on"
+    next_start = dt_util.parse_datetime(hass.states.get(entity_id(hass, "sensor", "_next_start")).state)
+    assert next_start == start + timedelta(days=1)
+
+
 async def test_valves_of_an_interrupted_run_are_closed(hass: HomeAssistant, garden, hass_storage) -> None:
     await hass.services.async_call("input_boolean", "turn_on", {"entity_id": VALVE_1}, blocking=True)
     entry = MockConfigEntry(

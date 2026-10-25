@@ -39,13 +39,17 @@ DURATION = _number("duration", 0, 240, 1, UnitOfTime.MINUTES)
 
 
 def _valve_name(hass: HomeAssistant, valve: str) -> str:
-    """Name of the valve for the duration entity; its integration may not be loaded yet."""
-    state = hass.states.get(valve)
-    if state is not None:
-        return str(state.attributes.get("friendly_name", valve))
+    """Name of the valve for the duration entity.
+
+    The registry name comes first: it is there before the valve's integration
+    has loaded, so the name is the same after every restart.
+    """
     entity = er.async_get(hass).async_get(valve)
     if (entity is not None) and (entity.name or entity.original_name):
         return str(entity.name or entity.original_name)
+    state = hass.states.get(valve)
+    if state is not None:
+        return str(state.attributes.get("friendly_name", valve))
     return valve
 
 

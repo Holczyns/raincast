@@ -419,8 +419,9 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
         self.log = [*self.log, entry][-RUN_LOG_SIZE:]
         self.run = None
         self._run_task = None
-        # A valve that could not be closed stays stored, so the next start closes it.
-        self._run_valves = [valve for valve in self._run_valves if interrupted and self._is_open(valve)]
+        # Cut off by a shutdown, the close commands may not have gone through; the next start closes again.
+        if not (interrupted and self.hass.is_stopping):
+            self._run_valves = []
         await self._async_save()
         self.async_set_updated_data(self._plan())
         title, message = run_message(self.entry.title, entry, self._friendly_name)
