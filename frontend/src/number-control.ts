@@ -92,8 +92,12 @@ export const controlStyles = css`
     cursor: pointer;
     font: inherit;
   }
-  button.text:hover {
+  button.text:hover:not(:disabled) {
     background: var(--secondary-background-color);
+  }
+  button.text:disabled {
+    opacity: 0.4;
+    cursor: default;
   }
   button.text.primary {
     color: var(--primary-color);

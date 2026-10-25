@@ -37,9 +37,11 @@ export class RainCastSettings extends LitElement {
             .localize=${this.localize}
             .focusZone=${this.focusZone}
           ></raincast-zones-card>
-          <raincast-sources-card .hass=${this.hass} .entry=${this.entry} .localize=${this.localize}></raincast-sources-card>
         </div>
-        <div class="column">${this.renderNotifications()}</div>
+        <div class="column">
+          <raincast-sources-card .hass=${this.hass} .entry=${this.entry} .localize=${this.localize}></raincast-sources-card>
+          ${this.renderNotifications()}
+        </div>
       </div>
       <p class="small">
         <a href="/config/integrations/integration/raincast">${this.localize("settings.entities")}</a>

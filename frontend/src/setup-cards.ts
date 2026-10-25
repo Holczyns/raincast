@@ -12,7 +12,7 @@ import {
 } from "./api";
 import "./entity-picker";
 import { type HomeAssistant, fireEvent } from "./ha";
-import type { Localize, TranslationKey } from "./localize";
+import { LANGUAGE, type Localize, type TranslationKey } from "./localize";
 import { controlStyles, numberControl } from "./number-control";
 import { shared } from "./styles";
 
@@ -52,7 +52,12 @@ function stateText(hass: HomeAssistant, entityId: string): string {
   const state = hass.states[entityId];
   if (!state) return "missing";
   const unit = state.attributes.unit_of_measurement;
-  return unit ? `${state.state} ${unit}` : state.state;
+  const number = Number(state.state);
+  const value =
+    (state.state !== "") && Number.isFinite(number)
+      ? number.toLocaleString(LANGUAGE, { maximumFractionDigits: 3 })
+      : state.state;
+  return unit ? `${value} ${unit}` : value;
 }
 
 /** Everything RainCast reads and drives; weather and meter are edited here, valves in their zone. */
@@ -282,6 +287,8 @@ export class RainCastZonesCard extends LitElement {
 
   render() {
     const t = this.localize;
+    // Flow limits exist only while a water meter is connected.
+    const metered = !!this.entry.sources.water_meter;
     return html`
       <section class="card">
         <h2>${t("settings.zones")}</h2>
@@ -291,6 +298,7 @@ export class RainCastZonesCard extends LitElement {
           : html`<div class="actions">
               <button class="text primary" @click=${() => this.startEdit()}>+ ${t("action.add_zone")}</button>
             </div>`}
+        ${metered ? html`<p class="muted small">${t("zone.max_flow_hint")}</p>` : nothing}
       </section>
     `;
   }
@@ -326,7 +334,6 @@ export class RainCastZonesCard extends LitElement {
             </div>
           `,
         )}
-        ${maxFlows.some((entity) => !!entity) ? html`<p class="muted small">${t("zone.max_flow_hint")}</p>` : nothing}
       </div>
     `;
   }
