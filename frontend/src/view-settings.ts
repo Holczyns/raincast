@@ -1,5 +1,5 @@
 import { LitElement, css, html, nothing, type TemplateResult } from "lit";
-import { type EntryInfo, setNotifyService } from "./api";
+import { type EntryInfo, type ZoneInfo, setNotifyService, updateZone } from "./api";
 import { type HomeAssistant, fireEvent, isOn } from "./ha";
 import { LANGUAGE, type Localize, type TranslationKey } from "./localize";
 import { controlStyles, numberControl } from "./number-control";
@@ -51,12 +51,13 @@ export class RainCastSettings extends LitElement {
             <div class="layout">
               <div class="column">${this.renderMowing()}</div>
               <div class="column">${this.renderMowingRules()}</div>
+              <div class="column">${this.renderLawnZones()}</div>
             </div>
           `
         : nothing}
       <h1 class="section"><ha-icon icon="mdi:cog-outline"></ha-icon>${t("section.general")}</h1>
       <div class="layout">
-        <div class="column">
+        <div class="column wide">
           <raincast-sources-card .hass=${this.hass} .entry=${this.entry} .localize=${this.localize}></raincast-sources-card>
         </div>
         <div class="column">${this.renderNotifications()}</div>
@@ -225,6 +226,42 @@ export class RainCastSettings extends LitElement {
         ${numberControl(this.hass, e.rain_ahead_hours, t("settings.rain_ahead_hours"))}
         <p class="muted small">${t("settings.mower_hint")}</p>
       </section>
+    `;
+  }
+
+  /** Which zones keep the mower in when they were watered today; saving reloads RainCast. */
+  private renderLawnZones(): TemplateResult {
+    const t = this.localize;
+    return html`
+      <section class="card">
+        <h2>${t("settings.lawn_zones")}</h2>
+        ${this.entry.zones.map((zone) =>
+          this.renderToggleText(zone.name, t(zone.roofed ? "zone.roofed" : "settings.open_zone"), zone.mower_conflict, (on) =>
+            this.setMowerConflict(zone, on),
+          ),
+        )}
+        <p class="muted small">${t("settings.lawn_zones_hint")}</p>
+      </section>
+    `;
+  }
+
+  private async setMowerConflict(zone: ZoneInfo, on: boolean): Promise<void> {
+    const fields = { name: zone.name, valves: zone.valves, roofed: zone.roofed, soil_sensor: zone.soil_sensor, mower_conflict: on };
+    await updateZone(this.hass, this.entry.entry_id, zone.id, fields);
+    fireEvent(this, "raincast-entries-changed");
+  }
+
+  private renderToggleText(title: string, hint: string, on: boolean, onChange: (on: boolean) => void) {
+    return html`
+      <div class="toggle-row">
+        <div>
+          <div>${title}</div>
+          <div class="muted small">${hint}</div>
+        </div>
+        <button class="toggle ${on ? "on" : ""}" role="switch" aria-checked=${on} @click=${() => onChange(!on)}>
+          <span></span>
+        </button>
+      </div>
     `;
   }
 

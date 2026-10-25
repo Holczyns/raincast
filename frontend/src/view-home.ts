@@ -82,35 +82,64 @@ export class RainCastHome extends LitElement {
     const mower = !!this.entry.sources.mower && !!this.entry.entities.mowing;
     return html`
       ${this.renderProblems()}
-      <h1 class="section"><ha-icon icon="mdi:sprinkler-variant"></ha-icon>${t("section.watering")}</h1>
-      <div class="layout">
-        <div class="column">${this.renderStatus()} ${this.renderWeather()}</div>
-        <div class="zones">${this.entry.zones.map((zone) => this.renderZone(zone))}</div>
-      </div>
-      ${mower
-        ? html`
-            <h1 class="section"><ha-icon icon="mdi:robot-mower-outline"></ha-icon>${t("section.mowing")}</h1>
-            <div class="layout">
-              <div class="column">${this.renderMower()}</div>
-              <div class="column">${this.entry.sources.weather ? this.renderRainCard() : nothing}</div>
-            </div>
-          `
-        : nothing}
+      <div class="status-row">${this.renderWatering()} ${mower ? this.renderMowing() : nothing} ${this.renderWeather()}</div>
+      <h1 class="section"><ha-icon icon="mdi:sprinkler"></ha-icon>${t("section.zones")}</h1>
+      <div class="zones">${this.entry.zones.map((zone) => this.renderZone(zone))}</div>
     `;
   }
 
-  private renderStatus(): TemplateResult {
+  /** Chip shared by both status cards: switched off, out of season, or what the next start does. */
+  private modeChip(automatic: string, first: string, last: string, active: TemplateResult): TemplateResult {
+    const t = this.localize;
+    if (!isOn(this.hass, automatic)) return html`<span class="chip warn">${t("home.automatic_off")}</span>`;
+    const from = numberState(this.hass, first);
+    const to = numberState(this.hass, last);
+    const outOfSeason = (from !== undefined) && (to !== undefined) && !inSeason(from, to);
+    if (outOfSeason) return html`<span class="chip warn">${t("home.out_of_season")}</span>`;
+    return active;
+  }
+
+  private nextText(entityId: string | undefined, label: TranslationKey, offLabel: TranslationKey, automatic: string) {
+    const t = this.localize;
+    const next = entityId ? this.hass.states[entityId]?.state : undefined;
+    const date = next && !["unknown", "unavailable"].includes(next) ? new Date(next) : undefined;
+    if (date) return t(label, { day: dayLabel(date), time: timeLabel(date) });
+    return t(isOn(this.hass, automatic) ? "home.no_start" : offLabel);
+  }
+
+  private renderWatering(): TemplateResult {
     const t = this.localize;
     const e = this.entry.entities;
     const control = isOn(this.hass, e.control);
     const running = this.hass.states[e.running];
     const watering = running?.state === "on";
+    const attributes = running?.attributes ?? {};
+    const chip = watering
+      ? html`<span class="chip water">${t("status.watering")}</span>`
+      : this.modeChip(
+          e.automatic,
+          e.season_start,
+          e.season_end,
+          html`<span class="chip ${control ? "ok" : "warn"}">${t(control ? "home.control_on" : "home.dry_run")}</span>`,
+        );
+    const valve = attributes.valve ? this.name(attributes.valve) : "";
+    const ends = attributes.valve_ends ? timeLabel(new Date(attributes.valve_ends)) : "";
     return html`
       <section class="card status ${watering ? "active" : ""}">
-        <div class="headline">
-          <ha-icon icon=${watering ? "mdi:sprinkler-variant" : "mdi:calendar-clock"}></ha-icon>
-          <div class="grow">${watering ? this.renderRunning() : this.renderNext()}</div>
-          ${this.renderModeChip(control)}
+        <h2>
+          <ha-icon icon="mdi:sprinkler-variant"></ha-icon>
+          <span class="grow">${t("section.watering")}</span>
+          ${chip}
+        </h2>
+        <div class="big">
+          ${watering
+            ? t("home.watering", { zone: attributes.zone ?? "" })
+            : this.nextText(e.next_start, "home.next_start", "home.automatic_off_title", e.automatic)}
+        </div>
+        <div class="muted small">
+          ${watering
+            ? html`${valve}${ends ? ` · ${t("home.valve_ends", { time: ends })}` : ""}`
+            : t("home.planned_now", { minutes: this.hass.states[e.planned]?.state ?? "0" })}
         </div>
         ${this.renderPlan()}
         ${this.error ? html`<div class="error">${this.error}</div>` : nothing}
@@ -132,142 +161,124 @@ export class RainCastHome extends LitElement {
     `;
   }
 
-  /** Why automatic watering would not run, or whether it waters for real. */
-  private renderModeChip(control: boolean): TemplateResult {
-    const t = this.localize;
-    const e = this.entry.entities;
-    if (!isOn(this.hass, e.automatic)) return html`<span class="chip warn">${t("home.automatic_off")}</span>`;
-    const first = numberState(this.hass, e.season_start);
-    const last = numberState(this.hass, e.season_end);
-    const outOfSeason = first !== undefined && last !== undefined && !inSeason(first, last);
-    if (outOfSeason) return html`<span class="chip warn">${t("home.out_of_season")}</span>`;
-    return html`<span class="chip ${control ? "ok" : "warn"}">${t(control ? "home.control_on" : "home.dry_run")}</span>`;
-  }
-
-  private renderRunning(): TemplateResult {
-    const t = this.localize;
-    const attributes = this.hass.states[this.entry.entities.running]?.attributes ?? {};
-    const valve = attributes.valve ? this.name(attributes.valve) : "";
-    const ends = attributes.valve_ends ? timeLabel(new Date(attributes.valve_ends)) : "";
-    return html`
-      <div class="big">${t("home.watering", { zone: attributes.zone ?? "" })}</div>
-      <div class="muted small">${valve}${ends ? ` · ${t("home.valve_ends", { time: ends })}` : ""}</div>
-    `;
-  }
-
-  private renderNext(): TemplateResult {
-    const t = this.localize;
-    const next = this.hass.states[this.entry.entities.next_start]?.state;
-    const date = next && !["unknown", "unavailable"].includes(next) ? new Date(next) : undefined;
-    if (!date) {
-      const off = !isOn(this.hass, this.entry.entities.automatic);
-      return html`<div class="big">${t(off ? "home.automatic_off_title" : "home.no_start")}</div>
-        <div class="muted small">${t("home.no_start_hint")}</div>`;
-    }
-    return html`
-      <div class="big">${t("home.next_start", { day: dayLabel(date), time: timeLabel(date) })}</div>
-      <div class="muted small">${t("home.planned_now", { minutes: this.hass.states[this.entry.entities.planned]?.state ?? "0" })}</div>
-    `;
-  }
-
   private renderPlan(): TemplateResult {
     const t = this.localize;
     const planned = this.hass.states[this.entry.entities.planned]?.attributes ?? {};
     const due = (planned.due as string[] | undefined) ?? [];
     const skipped = (planned.skipped as Record<string, string> | undefined) ?? {};
     return html`
-      <ul class="plan">
-        ${due.map((name) => html`<li><ha-icon class="ok" icon="mdi:check-circle"></ha-icon>${name}</li>`)}
-        ${Object.entries(skipped).map(
-          ([name, status]) =>
-            html`<li class="muted">
-              <ha-icon icon="mdi:skip-next-circle-outline"></ha-icon>${name} · ${t(`status.${status}` as TranslationKey)}
-            </li>`,
-        )}
+      <ul class="checks">
+        ${due.map((name) => this.check(true, name, t("status.due")))}
+        ${Object.entries(skipped).map(([name, status]) => this.check(false, name, t(`status.${status}` as TranslationKey)))}
       </ul>
     `;
   }
 
+  /** One line of a status list: passed or held, with its reason. */
+  private check(passed: boolean, label: string, detail: string): TemplateResult {
+    return html`<li class=${passed ? "" : "muted"}>
+      <ha-icon class=${passed ? "ok" : "held"} icon=${passed ? "mdi:check-circle" : "mdi:minus-circle-outline"}></ha-icon>
+      <span class="grow">${label}</span><span class="small">${detail}</span>
+    </li>`;
+  }
+
+  private renderMowing(): TemplateResult {
+    const t = this.localize;
+    const e = this.entry.entities;
+    const mower = this.entry.sources.mower ?? "";
+    const status = this.hass.states[e.mowing]?.state ?? "unknown";
+    const mowing = status === "mowing";
+    const chip = mowing
+      ? html`<span class="chip water">${t("mow.mowing")}</span>`
+      : this.modeChip(
+          e.automatic_mowing,
+          e.mower_season_start,
+          e.mower_season_end,
+          html`<span class="chip ${status === "ready" ? "ok" : "warn"}">${t(status === "ready" ? "mow.ready" : "mow.held")}</span>`,
+        );
+    return html`
+      <section class="card status ${mowing ? "active" : ""}">
+        <h2>
+          <ha-icon icon="mdi:robot-mower-outline"></ha-icon>
+          <span class="grow">${t("section.mowing")}</span>
+          ${chip}
+        </h2>
+        <div class="big">
+          ${mowing ? t("mow.mowing") : this.nextText(e.next_mowing, "home.next_mowing_at", "home.automatic_mowing_off", e.automatic_mowing)}
+        </div>
+        <div class="muted small">${t("home.mower_is", { state: this.hass.states[mower]?.state ?? "–" })}</div>
+        ${this.renderMowChecks()}
+        <div class="actions">
+          <button class="text primary" ?disabled=${mowing} @click=${() => this.press(e.mow_now)}>
+            <ha-icon icon="mdi:play"></ha-icon> ${t("home.mow_now")}
+          </button>
+        </div>
+      </section>
+    `;
+  }
+
+  /** Every condition the mower waits for, each with its own state, in the order the mower checks them. */
+  private renderMowChecks(): TemplateResult {
+    const t = this.localize;
+    const e = this.entry.entities;
+    const s = this.entry.sources;
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    const lawn = this.entry.zones.filter((zone) => zone.mower_conflict);
+    const watered = lawn.some((zone) => this.hass.states[zone.entities.last_watered]?.state === today);
+    const wateringNow = this.hass.states[e.mowing]?.state === "watering";
+    const raining = isOn(this.hass, e.raining);
+    const since = numberState(this.hass, e.hours_since_rain);
+    const ahead = numberState(this.hass, e.hours_to_rain);
+    const dry = numberState(this.hass, e.dry_hours) ?? 0;
+    const window = numberState(this.hass, e.rain_ahead_hours) ?? 0;
+    const outdoor = numberState(this.hass, s.outdoor_sensor ?? undefined);
+    const frostMin = numberState(this.hass, e.frost_min);
+    const rained = raining || ((since !== undefined) && (since < dry));
+    const soon = (ahead !== undefined) && (ahead < window);
+    const frost = (outdoor !== undefined) && (frostMin !== undefined) && (outdoor < frostMin);
+    const sinceText = raining ? t("home.raining") : since === undefined ? "–" : t("home.hours_ago", { hours: formatNumber(since, 1) });
+    const aheadText = ahead === undefined ? t("home.no_rain_ahead") : t("home.in_hours", { hours: formatNumber(ahead, 1) });
+    return html`
+      <ul class="checks">
+        ${this.check(!(watered || wateringNow), t("mowcheck.lawn"), t(wateringNow ? "mow.watering" : watered ? "mow.watered" : "mowcheck.dry_lawn"))}
+        ${s.weather ? this.check(!rained, t("mowcheck.rain_behind", { hours: formatNumber(dry, 0) }), sinceText) : nothing}
+        ${s.weather ? this.check(!soon, t("mowcheck.rain_ahead", { hours: formatNumber(window, 1) }), aheadText) : nothing}
+        ${s.outdoor_sensor ? this.check(!frost, t("mowcheck.frost"), outdoor === undefined ? "–" : `${formatNumber(outdoor, 1)} °C`) : nothing}
+      </ul>
+    `;
+  }
+
+  /** Every weather input in one place: rain forecast and frost for watering, rain now, behind and ahead. */
   private renderWeather(): TemplateResult {
     const t = this.localize;
     const s = this.entry.sources;
     const e = this.entry.entities;
-    return html`
-      <section class="card">
-        <h2><ha-icon icon="mdi:weather-partly-rainy"></ha-icon>${t("home.weather")}</h2>
-        ${this.renderGauge(t("home.rain"), s.rain_sensor, e.rain_max, "mm")}
-        ${s.outdoor_sensor ? this.renderGauge(t("home.outdoor"), s.outdoor_sensor, e.frost_min, "°C", true) : nothing}
-        <p class="muted small">${t("home.weather_hint")}</p>
-      </section>
-    `;
-  }
-
-  /** Rain now, since the last rain and until the next one, from the weather entity. */
-  /** Rain now, since the last rain and until the next one, against the mower's limits. */
-  private renderRainCard(): TemplateResult {
-    const t = this.localize;
-    const e = this.entry.entities;
     const raining = isOn(this.hass, e.raining);
     const since = numberState(this.hass, e.hours_since_rain);
     const ahead = numberState(this.hass, e.hours_to_rain);
-    const dry = numberState(this.hass, e.dry_hours);
-    const window = numberState(this.hass, e.rain_ahead_hours);
-    const recent = (since !== undefined) && (dry !== undefined) && (since < dry);
-    const soon = (ahead !== undefined) && (window !== undefined) && (ahead < window);
     return html`
-      <section class="card">
-        <h2><ha-icon icon="mdi:weather-pouring"></ha-icon>${t("home.rain_card")}</h2>
-        <div class="gauge">
-          <span>${t("home.rain_now")}</span>
-          <span class=${raining ? "warn-text" : ""}>${t(raining ? "home.raining" : "home.dry")}</span>
-        </div>
-        <div class="gauge">
-          <span>${t("home.last_rain")}</span>
-          <span class=${recent ? "warn-text" : ""}>
-            ${since === undefined ? "–" : t("home.hours_ago", { hours: formatNumber(since, 1) })}
-            <span class="muted small">/ ${t("home.dry_after", { hours: formatNumber(dry, 0) })}</span>
-          </span>
-        </div>
-        <div class="gauge">
-          <span>${t("home.next_rain")}</span>
-          <span class=${soon ? "warn-text" : ""}>
-            ${ahead === undefined ? t("home.no_rain_ahead") : t("home.in_hours", { hours: formatNumber(ahead, 1) })}
-            <span class="muted small">/ ${t("home.ahead_limit", { hours: formatNumber(window, 1) })}</span>
-          </span>
-        </div>
-      </section>
-    `;
-  }
-
-  /** The mower: what keeps it in right now, its next start, and a forced start. */
-  private renderMower(): TemplateResult | typeof nothing {
-    const t = this.localize;
-    const e = this.entry.entities;
-    const mower = this.entry.sources.mower;
-    if (!mower || !e.mowing) return nothing;
-    const status = this.hass.states[e.mowing]?.state ?? "unknown";
-    const next = this.hass.states[e.next_mowing]?.state;
-    const date = next && !["unknown", "unavailable"].includes(next) ? new Date(next) : undefined;
-    const automatic = isOn(this.hass, e.automatic_mowing);
-    const chip = status === "mowing" ? "water" : status === "ready" ? "ok" : "warn";
-    return html`
-      <section class="card ${status === "mowing" ? "active" : ""}">
+      <section class="card status">
         <h2>
-          <ha-icon icon="mdi:robot-mower-outline"></ha-icon>
-          <span class="grow">${t("home.mower")}</span>
-          <span class="chip ${chip}">${t(`mow.${status}` as TranslationKey)}</span>
+          <ha-icon icon="mdi:weather-partly-rainy"></ha-icon>
+          <span class="grow">${t("home.weather")}</span>
+          ${s.weather ? html`<span class="chip ${raining ? "warn" : "ok"}">${t(raining ? "home.raining" : "home.dry")}</span>` : nothing}
         </h2>
-        <dl>
-          <dt>${t("home.mower_state")}</dt>
-          <dd>${this.hass.states[mower]?.state ?? "–"}</dd>
-          <dt>${t("home.next_mowing")}</dt>
-          <dd>${!automatic ? t("home.automatic_off") : date ? `${dayLabel(date)}, ${timeLabel(date)}` : "–"}</dd>
-        </dl>
-        <div class="actions">
-          <button class="text primary" ?disabled=${status === "mowing"} @click=${() => this.press(e.mow_now)}>
-            <ha-icon icon="mdi:play"></ha-icon> ${t("home.mow_now")}
-          </button>
-        </div>
+        ${this.renderGauge(t("home.rain"), s.rain_sensor, e.rain_max, "mm")}
+        ${s.outdoor_sensor ? this.renderGauge(t("home.outdoor"), s.outdoor_sensor, e.frost_min, "°C", true) : nothing}
+        ${s.weather
+          ? html`
+              <div class="gauge">
+                <span>${t("home.last_rain")}</span>
+                <span>${raining ? t("home.raining") : since === undefined ? "–" : t("home.hours_ago", { hours: formatNumber(since, 1) })}</span>
+              </div>
+              <div class="gauge">
+                <span>${t("home.next_rain")}</span>
+                <span>${ahead === undefined ? t("home.no_rain_ahead") : t("home.in_hours", { hours: formatNumber(ahead, 1) })}</span>
+              </div>
+            `
+          : nothing}
+        <p class="muted small">${t("home.weather_hint")}</p>
       </section>
     `;
   }
@@ -479,11 +490,36 @@ export class RainCastHome extends LitElement {
     shared,
     controlStyles,
     css`
-      .layout {
+      /* Statuses side by side, each the same width; zones below on the same grid. */
+      .status-row,
+      .zones {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: var(--rc-gap);
+        align-items: stretch;
+      }
+      .zones {
         align-items: start;
+      }
+      @media (max-width: 1250px) {
+        .status-row,
+        .zones {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+      @media (max-width: 760px) {
+        .status-row,
+        .zones {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+      .card.status {
+        display: flex;
+        flex-direction: column;
+      }
+      .card.status .actions {
+        margin-top: auto;
+        padding-top: 8px;
       }
       h1.section {
         display: flex;
@@ -493,9 +529,6 @@ export class RainCastHome extends LitElement {
         font-size: 1.1rem;
         font-weight: 500;
       }
-      h1.section:first-of-type {
-        margin-top: 4px;
-      }
       h1.section ha-icon {
         --mdc-icon-size: 22px;
         color: var(--primary-color);
@@ -503,34 +536,14 @@ export class RainCastHome extends LitElement {
       .problems {
         margin-bottom: var(--rc-gap);
       }
-      .column {
-        display: flex;
-        flex-direction: column;
-        gap: var(--rc-gap);
-        min-width: 0;
-      }
-      .zones {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-        gap: var(--rc-gap);
-        align-items: start;
-      }
-      @media (max-width: 900px) {
-        .layout {
-          grid-template-columns: minmax(0, 1fr);
-        }
+      h1.section {
+        margin-top: 28px;
       }
       .card.active {
         border-color: var(--rc-water);
         box-shadow: 0 0 0 1px var(--rc-water);
       }
-      .headline {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-      .headline ha-icon {
-        --mdc-icon-size: 32px;
+      .card h2 ha-icon {
         color: var(--rc-water);
       }
       .grow {
@@ -541,20 +554,23 @@ export class RainCastHome extends LitElement {
         font-size: 1.15rem;
         font-weight: 500;
       }
-      .plan {
+      .checks {
         list-style: none;
         margin: 12px 0 0;
         padding: 0;
         display: grid;
         gap: 4px;
       }
-      .plan li {
+      .checks li {
         display: flex;
         align-items: center;
         gap: 8px;
       }
-      .plan ha-icon {
+      .checks ha-icon {
         --mdc-icon-size: 18px;
+      }
+      ha-icon.held {
+        color: var(--rc-warn);
       }
       ha-icon.ok {
         color: var(--rc-ok);

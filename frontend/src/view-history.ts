@@ -1,10 +1,12 @@
 import { LitElement, css, html, nothing, type TemplateResult } from "lit";
-import type { EntryInfo, RunLogEntry, ValveResult } from "./api";
+import type { EntryInfo, RunLogEntry, ValveResult, ZoneResult } from "./api";
 import { type HomeAssistant, type LovelaceCard, createCard } from "./ha";
 import { type Localize, type TranslationKey, dayLabel, formatNumber, timeLabel } from "./localize";
 import { shared } from "./styles";
 
 const GRAPH_HOURS = 24 * 7;
+// The latest runs are listed; the rest open on demand.
+const RUNS_SHOWN = 15;
 const WATER_DAYS = 30;
 
 export class RainCastHistory extends LitElement {
@@ -12,11 +14,13 @@ export class RainCastHistory extends LitElement {
     hass: { attribute: false },
     entry: { attribute: false },
     localize: { attribute: false },
+    showAll: { state: true },
   };
 
   hass!: HomeAssistant;
   entry!: EntryInfo;
   localize!: Localize;
+  showAll = false;
   private cards: LovelaceCard[] = [];
   private cardsFor?: EntryInfo;
 
@@ -64,19 +68,40 @@ export class RainCastHistory extends LitElement {
 
   render() {
     const t = this.localize;
+    const runs = this.showAll ? this.entry.log : this.entry.log.slice(0, RUNS_SHOWN);
     return html`
-      <div class="layout">
-        <section class="card">
-          <h2><ha-icon icon="mdi:history"></ha-icon>${t("history.runs")}</h2>
-          ${this.entry.log.length
-            ? html`<div class="runs">${this.entry.log.map((run) => this.renderRun(run))}</div>`
-            : html`<p class="muted">${t("history.no_runs")}</p>`}
-        </section>
-        <div class="graphs"></div>
-      </div>
+      <div class="graphs"></div>
+      <section class="card runs">
+        <h2><ha-icon icon="mdi:history"></ha-icon>${t("history.runs")}</h2>
+        ${this.entry.log.length
+          ? html`
+              <table>
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th>${t("history.when")}</th>
+                    <th>${t("history.kind")}</th>
+                    <th>${t("history.zones")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${runs.map((run) => this.renderRun(run))}
+                </tbody>
+              </table>
+              ${this.entry.log.length > RUNS_SHOWN
+                ? html`<div class="actions">
+                    <button class="text" @click=${() => (this.showAll = !this.showAll)}>
+                      ${t(this.showAll ? "history.show_less" : "history.show_all", { count: this.entry.log.length })}
+                    </button>
+                  </div>`
+                : nothing}
+            `
+          : html`<p class="muted">${t("history.no_runs")}</p>`}
+      </section>
     `;
   }
 
+  /** One run as a table row; its valves open below the zone they belong to. */
   private renderRun(run: RunLogEntry): TemplateResult {
     const t = this.localize;
     const started = run.started ? new Date(run.started) : undefined;
@@ -84,33 +109,46 @@ export class RainCastHistory extends LitElement {
     const complete = !run.interrupted && run.zones.every((zone) => zone.watered);
     const when = started ? `${dayLabel(started)} ${timeLabel(started)}${ended ? `–${timeLabel(ended)}` : ""}` : "–";
     return html`
-      <div class="run">
-        <div class="run-head">
-          <ha-icon
-            class=${complete ? "ok" : "warn"}
-            icon=${complete ? "mdi:check-circle" : "mdi:alert-circle-outline"}
-          ></ha-icon>
-          <span class="grow">${when}</span>
-          <span class="chip">${t(`reason.${run.reason}` as TranslationKey)}</span>
-        </div>
-        ${run.zones.map(
-          (zone) => html`
-            <div class="zone-row">
-              <span>${zone.name}</span>
-              <span class=${zone.watered ? "" : "warn-text"}>
-                ${t("history.watered", { watered: formatNumber(zone.watered_min, 0), planned: formatNumber(zone.planned_min, 0) })}
-                ${zone.liters !== null && zone.liters !== undefined ? html` · ${formatNumber(zone.liters, 0)} l` : nothing}
-              </span>
-            </div>
-            ${(zone.valves ?? []).map((valve) => this.renderValve(valve))}
-            ${zone.not_opened.length
-              ? html`<div class="muted small">${t("history.not_opened", { valves: zone.not_opened.map((valve) => this.hass.states[valve]?.attributes.friendly_name ?? valve).join(", ") })}</div>`
-              : nothing}
-          `,
-        )}
-        ${run.interrupted ? html`<div class="muted small">${t("history.interrupted")}</div>` : nothing}
-      </div>
+      <tr>
+        <td>
+          <ha-icon class=${complete ? "ok" : "warn"} icon=${complete ? "mdi:check-circle" : "mdi:alert-circle-outline"}></ha-icon>
+        </td>
+        <td class="nowrap">${when}</td>
+        <td class="nowrap">${t(`reason.${run.reason}` as TranslationKey)}</td>
+        <td>
+          ${run.zones.map((zone) => this.renderZone(zone))}
+          ${run.interrupted ? html`<div class="warn-text small">${t("history.interrupted")}</div>` : nothing}
+        </td>
+      </tr>
     `;
+  }
+
+  private renderZone(zone: ZoneResult): TemplateResult {
+    const t = this.localize;
+    const summary = html`
+      <span class="zone-name">${zone.name}</span>
+      <span class=${zone.watered ? "" : "warn-text"}>
+        ${t("history.watered", { watered: formatNumber(zone.watered_min, 0), planned: formatNumber(zone.planned_min, 0) })}
+        ${zone.liters !== null && zone.liters !== undefined ? html` · ${formatNumber(zone.liters, 0)} l` : nothing}
+      </span>
+    `;
+    const valves = zone.valves ?? [];
+    if (!valves.length && !zone.not_opened.length) return html`<div class="zone">${summary}</div>`;
+    return html`
+      <details class="zone">
+        <summary>${summary}</summary>
+        ${valves.map((valve) => this.renderValve(valve))}
+        ${zone.not_opened.length
+          ? html`<div class="warn-text small">
+              ${t("history.not_opened", { valves: zone.not_opened.map((valve) => this.friendly(valve)).join(", ") })}
+            </div>`
+          : nothing}
+      </details>
+    `;
+  }
+
+  private friendly(entityId: string): string {
+    return String(this.hass.states[entityId]?.attributes.friendly_name ?? entityId);
   }
 
   private renderValve(valve: ValveResult): TemplateResult {
@@ -119,8 +157,8 @@ export class RainCastHistory extends LitElement {
     if (valve.liters !== null) parts.push(`${formatNumber(valve.liters, 0)} l`);
     if (valve.flow !== null) parts.push(t("zone.flow", { flow: formatNumber(valve.flow, 1) }));
     return html`
-      <div class="valve-row muted small">
-        <span>${this.hass.states[valve.entity_id]?.attributes.friendly_name ?? valve.entity_id}</span>
+      <div class="valve muted small">
+        <span>${this.friendly(valve.entity_id)}</span>
         <span>
           ${valve.no_flow ? html`<b class="warn-text">${t("history.no_flow")}</b> · ` : nothing}
           ${valve.flow_high ? html`<b class="warn-text">${t("history.flow_high")}</b> · ` : nothing} ${parts.join(" · ")}
@@ -132,42 +170,73 @@ export class RainCastHistory extends LitElement {
   static styles = [
     shared,
     css`
-      .layout {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
-        gap: var(--rc-gap);
-        align-items: start;
-      }
+      /* Graphs two by two, the water per zone over the full width; the run log below them. */
       .graphs {
-        display: flex;
-        flex-direction: column;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: var(--rc-gap);
-        min-width: 0;
+        margin-bottom: var(--rc-gap);
+      }
+      .graphs > :first-child:nth-last-child(odd) {
+        grid-column: 1 / -1;
       }
       @media (max-width: 900px) {
-        .layout {
+        .graphs {
           grid-template-columns: minmax(0, 1fr);
         }
       }
-      .runs {
-        display: grid;
-        gap: 10px;
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
       }
-      .run {
+      th {
+        text-align: left;
+        font-weight: 500;
+        color: var(--rc-muted);
+        padding: 4px 8px;
         border-bottom: 1px solid var(--divider-color);
-        padding-bottom: 10px;
       }
-      .run:last-child {
+      td {
+        padding: 6px 8px;
+        border-bottom: 1px solid var(--divider-color);
+        vertical-align: top;
+      }
+      tr:last-child td {
         border-bottom: none;
       }
-      .run-head {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 4px;
+      td:first-child,
+      th:first-child {
+        width: 24px;
+        padding-right: 0;
       }
-      .grow {
-        flex: 1;
+      .nowrap {
+        white-space: nowrap;
+      }
+      .zone {
+        margin-bottom: 2px;
+      }
+      .zone summary,
+      div.zone {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        cursor: pointer;
+      }
+      div.zone {
+        cursor: default;
+      }
+      .zone-name {
+        font-weight: 500;
+      }
+      .valve {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 2px 0 2px 16px;
+      }
+      ha-icon {
+        --mdc-icon-size: 18px;
       }
       ha-icon.ok {
         color: var(--rc-ok);
@@ -175,24 +244,8 @@ export class RainCastHistory extends LitElement {
       ha-icon.warn {
         color: var(--rc-warn);
       }
-      .zone-row {
-        display: flex;
-        justify-content: space-between;
-        gap: 8px;
-        font-size: 0.9rem;
-        padding-left: 28px;
-      }
-      .small {
-        padding-left: 28px;
-      }
       .warn-text {
         color: var(--rc-warn);
-      }
-      .valve-row {
-        display: flex;
-        justify-content: space-between;
-        gap: 8px;
-        padding-left: 40px;
       }
     `,
   ];
