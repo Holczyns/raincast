@@ -78,3 +78,13 @@ export function pressButton(hass: HomeAssistant, entityId: string | undefined): 
 export function durationEntities(zone: ZoneInfo): (string | undefined)[] {
   return zone.valves.map((_valve, index) => zone.entities[`duration_${index}`]);
 }
+
+/** Water one zone now; each valve runs for its given minutes, 0 leaves it out. */
+export function runZone(
+  hass: HomeAssistant,
+  entryId: string,
+  zoneId: string,
+  minutes: Record<string, number>,
+): Promise<void> {
+  return hass.callWS({ type: "raincast/run_zone", entry_id: entryId, zone_id: zoneId, minutes });
+}

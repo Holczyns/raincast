@@ -314,3 +314,33 @@ async def test_panel_commands_change_zones_and_sources(hass: HomeAssistant, gard
     assert (await client.receive_json())["success"]
     await hass.async_block_till_done()
     assert "notify_service" not in entry.options
+
+
+async def test_manual_times_run_given_valves_without_booking_a_short_run(
+    hass: HomeAssistant, garden, hass_ws_client, freezer
+) -> None:
+    entry = await run_wizard(hass)
+    [zone_id] = entry.subentries
+    client = await hass_ws_client(hass)
+    message = {"type": "raincast/run_zone", "entry_id": entry.entry_id, "zone_id": zone_id}
+
+    await client.send_json_auto_id({**message, "minutes": {VALVE_1: 1, VALVE_2: 0}})
+    assert (await client.receive_json())["error"]["message"] == "Valve control is off"
+
+    await hass.services.async_call(
+        "switch", "turn_on", {"entity_id": entity_id(hass, "switch", "_control")}, blocking=True
+    )
+    await client.send_json_auto_id({**message, "minutes": {VALVE_1: 0, VALVE_2: 0}})
+    assert not (await client.receive_json())["success"]
+
+    await client.send_json_auto_id({**message, "minutes": {VALVE_1: 1, VALVE_2: 0}})
+    assert (await client.receive_json())["success"]
+    await advance(hass, freezer, 10)
+    assert hass.states.get(VALVE_1).state == "on"
+    await advance(hass, freezer, 70)
+    assert hass.states.get(VALVE_1).state == "off"
+    assert hass.states.get(VALVE_2).state == "off"
+    assert hass.states.get(entity_id(hass, "binary_sensor", "_running")).state == "off"
+    # 1 of the zone's 2 minutes: the zone stays due.
+    assert hass.states.get(entity_id(hass, "date", "_last_watered")).state == "unknown"
+    assert entry.runtime_data.log[-1]["zones"][0]["planned_min"] == 1.0

@@ -1,6 +1,7 @@
 """Websocket commands used by the RainCast panel.
 
-Reading is open to every user; every change requires an administrator.
+Reading and starting a manual run are open to every user, as the run buttons
+are; every change of the configuration requires an administrator.
 Changes go through the config entry and its zone subentries, exactly as
 the setup wizard stores them, so the entry reloads afterwards. The panel
 finds entities by key, so it does not depend on entity naming.
@@ -15,6 +16,7 @@ import probatio
 from homeassistant.components import websocket_api
 from homeassistant.config_entries import ConfigEntry, ConfigSubentry
 from homeassistant.core import HomeAssistant, callback, split_entity_id
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 
 from .const import (
@@ -39,7 +41,15 @@ SOURCE_FIELDS = (CONF_SOIL_SENSOR, CONF_RAIN_SENSOR)
 
 @callback
 def async_register_commands(hass: HomeAssistant) -> None:
-    for command in (ws_entries, ws_set_options, ws_update_sources, ws_add_zone, ws_update_zone, ws_remove_zone):
+    for command in (
+        ws_entries,
+        ws_run_zone,
+        ws_set_options,
+        ws_update_sources,
+        ws_add_zone,
+        ws_update_zone,
+        ws_remove_zone,
+    ):
         websocket_api.async_register_command(hass, command)
 
 
@@ -247,4 +257,32 @@ def ws_remove_zone(hass: HomeAssistant, connection: websocket_api.ActiveConnecti
         connection.send_error(msg["id"], websocket_api.ERR_NOT_FOUND, "Unknown zone")
         return
     hass.config_entries.async_remove_subentry(entry, msg["zone_id"])
+    connection.send_result(msg["id"])
+
+
+@websocket_api.websocket_command(
+    {
+        probatio.Required("type"): "raincast/run_zone",
+        probatio.Required("entry_id"): str,
+        probatio.Required("zone_id"): str,
+        probatio.Required("minutes"): {str: probatio.All(probatio.Coerce(float), probatio.Range(min=0, max=240))},
+    }
+)
+@websocket_api.async_response
+async def ws_run_zone(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Water one zone now with the given valve times; valves of other zones are ignored."""
+    entry = _entry(hass, connection, msg)
+    if entry is None:
+        return
+    zone = _zone(entry, msg["zone_id"])
+    if zone is None:
+        connection.send_error(msg["id"], websocket_api.ERR_NOT_FOUND, "Unknown zone")
+        return
+    valves = zone.data.get(CONF_VALVES, [])
+    minutes = {valve: value for valve, value in msg["minutes"].items() if valve in valves}
+    try:
+        await entry.runtime_data.async_run_zone(zone.subentry_id, minutes)
+    except HomeAssistantError as err:
+        connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, str(err))
+        return
     connection.send_result(msg["id"])

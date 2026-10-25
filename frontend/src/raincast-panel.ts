@@ -24,6 +24,7 @@ class RainCastPanel extends LitElement {
     entries: { state: true },
     entryId: { state: true },
     tab: { state: true },
+    focusZone: { state: true },
     error: { state: true },
   };
 
@@ -32,6 +33,8 @@ class RainCastPanel extends LitElement {
   entries?: EntryInfo[];
   entryId?: string;
   tab = "home";
+  /** Zone the settings tab scrolls to, after its settings button on the Home tab. */
+  focusZone?: string;
   error?: string;
   private loading = false;
   private wasRunning?: string;
@@ -62,6 +65,16 @@ class RainCastPanel extends LitElement {
     }
   }
 
+  private selectTab(tab: string): void {
+    this.tab = tab;
+    this.focusZone = undefined;
+  }
+
+  private openZone = (event: Event) => {
+    this.focusZone = (event as CustomEvent<string>).detail;
+    this.tab = "settings";
+  };
+
   private entriesChanged = () => {
     window.setTimeout(() => this.load(), RELOAD_DELAY_MS);
   };
@@ -69,12 +82,14 @@ class RainCastPanel extends LitElement {
   connectedCallback(): void {
     super.connectedCallback();
     this.addEventListener("raincast-entries-changed", this.entriesChanged);
+    this.addEventListener("raincast-open-zone", this.openZone);
     if (this.hass) this.load();
   }
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.removeEventListener("raincast-entries-changed", this.entriesChanged);
+    this.removeEventListener("raincast-open-zone", this.openZone);
   }
 
   render() {
@@ -95,7 +110,7 @@ class RainCastPanel extends LitElement {
         <nav>
           ${TABS.map(
             (tab) => html`
-              <button class="tab ${tab.id === this.tab ? "active" : ""}" @click=${() => (this.tab = tab.id)}>
+              <button class="tab ${tab.id === this.tab ? "active" : ""}" @click=${() => this.selectTab(tab.id)}>
                 <ha-icon icon=${tab.icon}></ha-icon><span>${this.localize(tab.label)}</span>
               </button>
             `,
@@ -117,7 +132,12 @@ class RainCastPanel extends LitElement {
       case "guide":
         return html`<raincast-guide></raincast-guide>`;
       case "settings":
-        return html`<raincast-settings .hass=${props.hass} .entry=${entry} .localize=${props.localize}></raincast-settings>`;
+        return html`<raincast-settings
+          .hass=${props.hass}
+          .entry=${entry}
+          .localize=${props.localize}
+          .focusZone=${this.focusZone}
+        ></raincast-settings>`;
       default:
         return html`<raincast-home .hass=${props.hass} .entry=${entry} .localize=${props.localize}></raincast-home>`;
     }

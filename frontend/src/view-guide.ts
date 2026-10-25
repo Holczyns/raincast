@@ -103,10 +103,17 @@ const SECTIONS: Section[] = [
     body: html`
       <ul>
         <li><b>Water due zones</b> runs the plan right now, as the daily start would.</li>
-        <li><b>Water now</b> on a zone waters it regardless of its interval and the weather.</li>
+        <li>
+          <b>Manual</b> on a zone card waters that zone now, regardless of its interval and the weather. Each valve runs for
+          the minutes you enter, its own time by default; 0 leaves a valve out.
+        </li>
         <li><b>Stop</b> ends the run and closes every valve of the controller.</li>
       </ul>
-      <p>Manual runs need Valve control; Stop always works. The last watering date of a zone can be corrected on its card entity.</p>
+      <p>
+        A manual run moves the zone's last watering date only when its valves ran for at least 90 % of the zone's own time,
+        so a short test does not postpone the next watering. Manual runs need Valve control; Stop always works.
+      </p>
+      <p>The interval and the time of each valve are changed in the settings, under Zones.</p>
     `,
   },
   {

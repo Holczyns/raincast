@@ -100,6 +100,8 @@ class RunState:
     reason: str
     started: datetime
     zone_keys: list[str]
+    minutes: dict[str, float] | None = None
+    """Valve times of a manual zone run, in place of the zone's own times."""
     zone: str | None = None
     valve: str | None = None
     valve_ends: datetime | None = None
@@ -310,10 +312,18 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
             raise HomeAssistantError("No zone is due right now")
         self._start_run([zone.key for zone in plan.due], "manual")
 
-    async def async_run_zone(self, zone_key: str) -> None:
-        """Water one zone now, regardless of its interval and the weather."""
+    async def async_run_zone(self, zone_key: str, minutes: dict[str, float] | None = None) -> None:
+        """Water one zone now, regardless of its interval and the weather.
+
+        With minutes, each valve runs for the given time instead of its own;
+        a valve left out or set to 0 does not run.
+        """
         self._check_can_run()
-        self._start_run([zone_key], "zone")
+        if zone_key not in self.zones:
+            raise HomeAssistantError("Unknown zone")
+        if (minutes is not None) and not any(value > 0 for value in minutes.values()):
+            raise HomeAssistantError("Give at least one valve a time")
+        self._start_run([zone_key], "zone", minutes)
 
     def _check_can_run(self) -> None:
         if not self.control_active:
@@ -322,8 +332,8 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
             raise HomeAssistantError("A run is already in progress")
 
     @callback
-    def _start_run(self, zone_keys: list[str], reason: str) -> None:
-        self.run = RunState(reason=reason, started=dt_util.now(), zone_keys=zone_keys)
+    def _start_run(self, zone_keys: list[str], reason: str, minutes: dict[str, float] | None = None) -> None:
+        self.run = RunState(reason=reason, started=dt_util.now(), zone_keys=zone_keys, minutes=minutes)
         self._run_task = self.entry.async_create_background_task(
             self.hass, self._async_run(self.run), name=f"{DOMAIN} run"
         )
@@ -339,7 +349,7 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
 
     async def _async_run(self, run: RunState) -> None:
         configs = {zone.key: zone for zone in self.zone_configs()}
-        zones = [configs[key] for key in run.zone_keys if key in configs]
+        zones = [self._run_zone(configs[key], run.minutes) for key in run.zone_keys if key in configs]
         self._run_valves = [slot.entity_id for zone in zones for slot in zone.active_valves]
         # Saved at once: after a restart these valves are closed.
         await self._async_save()
@@ -347,7 +357,7 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
         try:
             for zone in zones:
                 run.zone = zone.key
-                await self._async_water_zone(run, zone)
+                await self._async_water_zone(run, zone, configs[zone.key].minutes * 60)
         except asyncio.CancelledError:
             interrupted = True
             if run.valve is not None:
@@ -356,7 +366,20 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
         finally:
             await self._async_finish_run(run, interrupted)
 
-    async def _async_water_zone(self, run: RunState, zone: ZoneConfig) -> None:
+    @staticmethod
+    def _run_zone(zone: ZoneConfig, minutes: dict[str, float] | None) -> ZoneConfig:
+        """The zone with the valve times of a manual run, or as configured."""
+        if minutes is None:
+            return zone
+        slots = tuple(ValveSlot(slot.entity_id, float(minutes.get(slot.entity_id, 0))) for slot in zone.valves)
+        return ZoneConfig(zone.key, zone.name, zone.roofed, zone.interval_days, slots)
+
+    async def _async_water_zone(self, run: RunState, zone: ZoneConfig, reference_s: float) -> None:
+        """Water the zone's valves in turn.
+
+        reference_s is the zone's own time: a manual run with shorter valve
+        times does not count as the zone's watering.
+        """
         result: dict[str, Any] = {
             "key": zone.key,
             "name": zone.name,
@@ -383,7 +406,7 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
             self._book_outcome(slot.entity_id, valve_run.outcome, result)
         run.valve = None
         run.valve_ends = None
-        result["watered"] = zone_watered(planned_s, watered_s)
+        result["watered"] = zone_watered(reference_s, watered_s)
         # The date follows the measured time, not the fact that the zone was in the run.
         if result["watered"]:
             self.last_watered[zone.key] = dt_util.now().date()

@@ -1,9 +1,18 @@
 import { LitElement, css, html, nothing, type TemplateResult } from "lit";
-import { type EntryInfo, type ZoneFields, type ZoneInfo, addZone, removeZone, updateSources, updateZone } from "./api";
+import {
+  type EntryInfo,
+  type ZoneFields,
+  type ZoneInfo,
+  addZone,
+  durationEntities,
+  removeZone,
+  updateSources,
+  updateZone,
+} from "./api";
 import "./entity-picker";
 import { type HomeAssistant, fireEvent } from "./ha";
 import type { Localize, TranslationKey } from "./localize";
-import { controlStyles } from "./number-control";
+import { controlStyles, numberControl } from "./number-control";
 import { shared } from "./styles";
 
 const SOURCE_FIELDS: { key: string; label: TranslationKey }[] = [
@@ -142,12 +151,13 @@ export class RainCastSourcesCard extends LitElement {
   ];
 }
 
-/** Zones with their valves: adding, editing and removing zones. */
+/** Zones with their interval and valve times, plus adding, editing and removing zones. */
 export class RainCastZonesCard extends LitElement {
   static properties = {
     hass: { attribute: false },
     entry: { attribute: false },
     localize: { attribute: false },
+    focusZone: { attribute: false },
     editing: { state: true },
     draft: { state: true },
     confirmRemove: { state: true },
@@ -158,6 +168,8 @@ export class RainCastZonesCard extends LitElement {
   hass!: HomeAssistant;
   entry!: EntryInfo;
   localize!: Localize;
+  /** Zone opened from its card on the Home tab; shown highlighted. */
+  focusZone?: string;
   /** Zone id being edited, "new" while adding, undefined otherwise. */
   editing?: string;
   draft?: ZoneFields;
@@ -205,18 +217,28 @@ export class RainCastZonesCard extends LitElement {
     `;
   }
 
+  protected updated(changed: Map<string, unknown>): void {
+    if (changed.has("focusZone") && this.focusZone) {
+      this.renderRoot.querySelector(`[data-zone="${this.focusZone}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }
+
   private renderZone(zone: ZoneInfo): TemplateResult {
     const t = this.localize;
+    const durations = durationEntities(zone);
     return html`
-      <div class="zone">
-        <ha-icon icon=${zone.roofed ? "mdi:greenhouse" : "mdi:sprinkler"}></ha-icon>
-        <div class="grow">
-          <div>${zone.name}</div>
-          <div class="muted small">${zone.valves.map((valve) => friendly(this.hass, valve)).join(", ")}</div>
+      <div class="zone-block ${zone.id === this.focusZone ? "focus" : ""}" data-zone=${zone.id}>
+        <div class="zone">
+          <ha-icon icon=${zone.roofed ? "mdi:greenhouse" : "mdi:sprinkler"}></ha-icon>
+          <div class="grow">
+            ${zone.name}${zone.roofed ? html` <span class="muted small">· ${t("zone.roofed")}</span>` : nothing}
+          </div>
+          <button class="text icon" title=${t("action.edit")} @click=${() => this.startEdit(zone)}>
+            <ha-icon icon="mdi:pencil"></ha-icon>
+          </button>
         </div>
-        <button class="text icon" title=${t("action.edit")} @click=${() => this.startEdit(zone)}>
-          <ha-icon icon="mdi:pencil"></ha-icon>
-        </button>
+        ${numberControl(this.hass, zone.entities.interval, t("zone.interval"))}
+        ${zone.valves.map((valve, index) => numberControl(this.hass, durations[index], friendly(this.hass, valve)))}
       </div>
     `;
   }
@@ -317,11 +339,22 @@ export class RainCastZonesCard extends LitElement {
     shared,
     controlStyles,
     css`
+      .zone-block {
+        border-bottom: 1px solid var(--divider-color);
+        padding: 6px 0 8px;
+      }
+      .zone-block.focus {
+        border: 1px solid var(--primary-color);
+        border-radius: 8px;
+        padding: 6px 10px 8px;
+        margin: 4px -10px;
+      }
       .zone {
         display: flex;
         align-items: center;
         gap: 10px;
-        padding: 6px 0;
+        padding: 4px 0;
+        font-weight: 500;
       }
       .zone ha-icon {
         color: var(--rc-muted);

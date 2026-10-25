@@ -1,8 +1,8 @@
 import { LitElement, css, html, nothing, type TemplateResult } from "lit";
-import { type EntryInfo, type ZoneInfo, durationEntities, pressButton } from "./api";
-import { type HomeAssistant, isOn, numberState } from "./ha";
+import { type EntryInfo, type ZoneInfo, durationEntities, pressButton, runZone } from "./api";
+import { type HomeAssistant, fireEvent, isOn, numberState } from "./ha";
 import { type Localize, type TranslationKey, dayLabel, formatNumber, timeLabel } from "./localize";
-import { controlStyles, numberControl } from "./number-control";
+import { controlStyles } from "./number-control";
 import { shared } from "./styles";
 
 const STATUS_CHIP: Record<string, string> = {
@@ -25,12 +25,35 @@ export class RainCastHome extends LitElement {
     entry: { attribute: false },
     localize: { attribute: false },
     error: { state: true },
+    manual: { state: true },
   };
 
   hass!: HomeAssistant;
   entry!: EntryInfo;
   localize!: Localize;
   error?: string;
+  /** Zone whose manual form is open, with the minutes entered per valve. */
+  manual?: { zoneId: string; minutes: Record<string, number> };
+
+  private openManual(zone: ZoneInfo): void {
+    const durations = durationEntities(zone);
+    const minutes = Object.fromEntries(
+      zone.valves.map((valve, index) => [valve, numberState(this.hass, durations[index]) ?? 0]),
+    );
+    this.manual = { zoneId: zone.id, minutes };
+    this.error = undefined;
+  }
+
+  private async startManual(zone: ZoneInfo): Promise<void> {
+    if (!this.manual) return;
+    this.error = undefined;
+    try {
+      await runZone(this.hass, this.entry.entry_id, zone.id, this.manual.minutes);
+      this.manual = undefined;
+    } catch (err) {
+      this.error = errorText(err);
+    }
+  }
 
   private async press(entityId: string | undefined): Promise<void> {
     this.error = undefined;
@@ -185,9 +208,9 @@ export class RainCastHome extends LitElement {
     const state = status?.state ?? "unknown";
     const last = this.hass.states[zone.entities.last_watered]?.state;
     const next = this.hass.states[zone.entities.next_due]?.state;
-    const control = isOn(this.hass, this.entry.entities.control);
-    const watering = isOn(this.hass, this.entry.entities.running);
+    const interval = numberState(this.hass, zone.entities.interval);
     const durations = durationEntities(zone);
+    const manual = this.manual?.zoneId === zone.id ? this.manual : undefined;
     return html`
       <section class="card zone ${state === "watering" ? "active" : ""}">
         <h2>
@@ -200,32 +223,73 @@ export class RainCastHome extends LitElement {
           <dd>${this.dateText(last, status?.attributes.days_since)}</dd>
           <dt>${t("zone.next_due")}</dt>
           <dd>${this.dateText(next)}</dd>
-          <dt>${t("zone.total")}</dt>
-          <dd>${t("zone.minutes", { minutes: status?.attributes.minutes ?? 0 })}</dd>
+          <dt>${t("zone.interval")}</dt>
+          <dd>${t("zone.every_days", { days: interval ?? "–" })}</dd>
         </dl>
-        ${numberControl(this.hass, zone.entities.interval, t("zone.interval"))}
         <div class="valves">
           ${zone.valves.map((valve, index) => {
             const open = OPEN_STATES.includes(this.hass.states[valve]?.state ?? "");
             return html`
               <div class="valve">
                 <span class="dot ${open ? "open" : ""}" title=${this.hass.states[valve]?.state ?? ""}></span>
-                ${numberControl(this.hass, durations[index], this.name(valve))}
+                <span class="grow">${this.name(valve)}</span>
+                ${manual
+                  ? html`<input
+                        class="text minutes"
+                        type="number"
+                        min="0"
+                        max="240"
+                        step="1"
+                        .value=${String(manual.minutes[valve] ?? 0)}
+                        @change=${(event: Event) => {
+                          const value = Number.parseFloat((event.target as HTMLInputElement).value);
+                          this.manual = {
+                            ...manual,
+                            minutes: { ...manual.minutes, [valve]: Number.isFinite(value) ? Math.max(0, value) : 0 },
+                          };
+                        }}
+                      /><span class="unit">min</span>`
+                  : html`<span class="muted">${t("zone.minutes", { minutes: formatNumber(numberState(this.hass, durations[index]), 0) })}</span>`}
               </div>
             `;
           })}
         </div>
-        <div class="actions">
-          <button
-            class="text primary"
-            ?disabled=${!control || watering}
-            title=${control ? "" : t("home.control_needed")}
-            @click=${() => this.press(zone.entities.run)}
-          >
-            <ha-icon icon="mdi:play"></ha-icon> ${t("zone.run")}
-          </button>
-        </div>
+        ${manual ? this.renderManualActions(zone) : this.renderZoneActions(zone)}
       </section>
+    `;
+  }
+
+  private renderZoneActions(zone: ZoneInfo): TemplateResult {
+    const t = this.localize;
+    return html`
+      <div class="actions">
+        <button class="text" @click=${() => fireEvent(this, "raincast-open-zone", zone.id)}>
+          <ha-icon icon="mdi:cog-outline"></ha-icon> ${t("zone.settings")}
+        </button>
+        <button class="text primary" @click=${() => this.openManual(zone)}>
+          <ha-icon icon="mdi:hand-water"></ha-icon> ${t("zone.manual")}
+        </button>
+      </div>
+    `;
+  }
+
+  private renderManualActions(zone: ZoneInfo): TemplateResult {
+    const t = this.localize;
+    const control = isOn(this.hass, this.entry.entities.control);
+    const watering = isOn(this.hass, this.entry.entities.running);
+    const anyTime = Object.values(this.manual?.minutes ?? {}).some((value) => value > 0);
+    return html`
+      <p class="muted small">${t(control ? "zone.manual_hint" : "home.control_needed")}</p>
+      <div class="actions">
+        <button class="text" @click=${() => (this.manual = undefined)}>${t("zone.cancel")}</button>
+        <button
+          class="text primary"
+          ?disabled=${!control || watering || !anyTime}
+          @click=${() => this.startManual(zone)}
+        >
+          <ha-icon icon="mdi:play"></ha-icon> ${t("zone.start")}
+        </button>
+      </div>
     `;
   }
 
@@ -372,8 +436,13 @@ export class RainCastHome extends LitElement {
         align-items: center;
         gap: 8px;
       }
-      .valve > :last-child {
-        flex: 1;
+      .valve {
+        padding: 4px 0;
+        min-height: 32px;
+      }
+      input.minutes {
+        width: 64px;
+        text-align: right;
       }
       .dot {
         flex: none;

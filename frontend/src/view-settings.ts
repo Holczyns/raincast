@@ -13,12 +13,14 @@ export class RainCastSettings extends LitElement {
     hass: { attribute: false },
     entry: { attribute: false },
     localize: { attribute: false },
+    focusZone: { attribute: false },
     confirming: { state: true },
   };
 
   hass!: HomeAssistant;
   entry!: EntryInfo;
   localize!: Localize;
+  focusZone?: string;
   confirming = false;
 
   render() {
@@ -29,7 +31,12 @@ export class RainCastSettings extends LitElement {
       <div class="layout">
         <div class="column">${this.renderControl()} ${this.renderSchedule()} ${this.renderLimits()}</div>
         <div class="column">
-          <raincast-zones-card .hass=${this.hass} .entry=${this.entry} .localize=${this.localize}></raincast-zones-card>
+          <raincast-zones-card
+            .hass=${this.hass}
+            .entry=${this.entry}
+            .localize=${this.localize}
+            .focusZone=${this.focusZone}
+          ></raincast-zones-card>
           <raincast-sources-card .hass=${this.hass} .entry=${this.entry} .localize=${this.localize}></raincast-sources-card>
         </div>
         <div class="column">${this.renderNotifications()}</div>
