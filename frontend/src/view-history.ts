@@ -5,6 +5,7 @@ import { type Localize, type TranslationKey, dayLabel, formatNumber, timeLabel }
 import { shared } from "./styles";
 
 const GRAPH_HOURS = 24 * 7;
+const WATER_DAYS = 30;
 
 export class RainCastHistory extends LitElement {
   static properties = {
@@ -27,14 +28,29 @@ export class RainCastHistory extends LitElement {
     for (const card of this.cards) card.hass = this.hass;
   }
 
-  /** Native history graphs: weather inputs against time, and the valves as a timeline. */
+  /** Native graphs: daily water per zone, weather inputs against time, and the valves as a timeline. */
   private async buildCards(): Promise<void> {
     const t = this.localize;
     const weather = [this.entry.sources.soil_sensor, this.entry.sources.rain_sensor].filter(
       (entity): entity is string => !!entity,
     );
     const valves = this.entry.zones.flatMap((zone) => zone.valves);
+    // Zones have a water sensor only while a water meter is connected.
+    const water = this.entry.zones
+      .map((zone) => (zone.entities.water_used ? { entity: zone.entities.water_used, name: zone.name } : null))
+      .filter((item) => item !== null);
     const configs = [
+      water.length
+        ? {
+            type: "statistics-graph",
+            title: t("history.water"),
+            entities: water,
+            stat_types: ["change"],
+            chart_type: "bar",
+            period: "day",
+            days_to_show: WATER_DAYS,
+          }
+        : null,
       weather.length ? { type: "history-graph", title: t("history.weather"), hours_to_show: GRAPH_HOURS, entities: weather } : null,
       valves.length ? { type: "history-graph", title: t("history.valves"), hours_to_show: GRAPH_HOURS, entities: valves } : null,
     ].filter((config) => config !== null);

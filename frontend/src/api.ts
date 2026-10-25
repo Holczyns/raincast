@@ -52,6 +52,7 @@ export interface EntryInfo {
   entities: Record<string, string>;
   zones: ZoneInfo[];
   log: RunLogEntry[];
+  native_valves: string[];
 }
 
 export function fetchEntries(hass: HomeAssistant): Promise<EntryInfo[]> {

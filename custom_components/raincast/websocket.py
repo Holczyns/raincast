@@ -84,6 +84,13 @@ def _describe(hass: HomeAssistant, entry: ConfigEntry) -> dict[str, Any]:
         "entities": controller,
         "zones": list(zones.values()),
         "log": list(reversed(coordinator.log)) if coordinator else [],
+        # Valves started with their run time, which close by themselves.
+        "native_valves": [
+            valve
+            for zone in zones.values()
+            for valve in zone["valves"]
+            if coordinator and coordinator.native_start(valve)
+        ],
     }
 
 

@@ -16,11 +16,24 @@ import type { Localize, TranslationKey } from "./localize";
 import { controlStyles, numberControl } from "./number-control";
 import { shared } from "./styles";
 
-const SOURCE_FIELDS: { key: string; label: TranslationKey; domains: string[]; deviceClass?: string }[] = [
-  { key: "soil_sensor", label: "src.soil_sensor", domains: ["sensor", "input_number"] },
-  { key: "rain_sensor", label: "src.rain_sensor", domains: ["sensor", "input_number"] },
-  { key: "water_meter", label: "src.water_meter", domains: ["sensor"], deviceClass: "water" },
+interface SourceField {
+  key: string;
+  label: TranslationKey;
+  domains: string[];
+  deviceClass?: string;
+}
+
+const SOURCE_GROUPS: { title: TranslationKey; fields: SourceField[] }[] = [
+  {
+    title: "src.weather",
+    fields: [
+      { key: "soil_sensor", label: "src.soil_sensor", domains: ["sensor", "input_number"] },
+      { key: "rain_sensor", label: "src.rain_sensor", domains: ["sensor", "input_number"] },
+    ],
+  },
+  { title: "src.water", fields: [{ key: "water_meter", label: "src.water_meter", domains: ["sensor"], deviceClass: "water" }] },
 ];
+const SOURCE_FIELDS = SOURCE_GROUPS.flatMap((group) => group.fields);
 const VALVE_DOMAINS = ["valve", "switch", "input_boolean"];
 const NEW_ZONE_INTERVAL = 3;
 const NEW_ZONE_DURATION = 15;
@@ -34,7 +47,15 @@ function friendly(hass: HomeAssistant, entityId: string | null | undefined): str
   return String(hass.states[entityId]?.attributes.friendly_name ?? entityId);
 }
 
-/** Weather inputs; saving reloads the integration. */
+/** Current state with its unit, as the entity reports it. */
+function stateText(hass: HomeAssistant, entityId: string): string {
+  const state = hass.states[entityId];
+  if (!state) return "missing";
+  const unit = state.attributes.unit_of_measurement;
+  return unit ? `${state.state} ${unit}` : state.state;
+}
+
+/** Everything RainCast reads and drives; weather and meter are edited here, valves in their zone. */
 export class RainCastSourcesCard extends LitElement {
   static properties = {
     hass: { attribute: false },
@@ -79,12 +100,25 @@ export class RainCastSourcesCard extends LitElement {
   private renderSummary(): TemplateResult {
     const t = this.localize;
     return html`
-      <dl>
-        ${SOURCE_FIELDS.map(
-          (field) => html`<dt>${t(field.label)}</dt>
-            <dd title=${this.entry.sources[field.key] ?? ""}>${friendly(this.hass, this.entry.sources[field.key])}</dd>`,
-        )}
-      </dl>
+      ${SOURCE_GROUPS.map(
+        (group) => html`
+          <h3>${t(group.title)}</h3>
+          ${group.fields.map((field) => this.renderEntity(t(field.label), this.entry.sources[field.key]))}
+        `,
+      )}
+      <h3>${t("src.valves")}</h3>
+      ${this.entry.zones.map(
+        (zone) => html`
+          <div class="zone-name">${zone.name}</div>
+          ${zone.valves.map((valve) =>
+            this.renderEntity(
+              friendly(this.hass, valve),
+              valve,
+              t(this.entry.native_valves.includes(valve) ? "src.native" : "src.open_close"),
+            ),
+          )}
+        `,
+      )}
       <p class="muted small">${t("settings.sources_hint")}</p>
       <div class="actions">
         <button
@@ -96,6 +130,25 @@ export class RainCastSourcesCard extends LitElement {
         >
           ${t("action.edit")}
         </button>
+      </div>
+    `;
+  }
+
+  private renderEntity(label: string, entityId: string | null | undefined, note?: string): TemplateResult {
+    const t = this.localize;
+    const missing = !!entityId && !this.hass.states[entityId];
+    const unavailable = !!entityId && ["unavailable", "unknown"].includes(this.hass.states[entityId]?.state ?? "");
+    return html`
+      <div class="entity">
+        <div class="grow">
+          <div>${label}</div>
+          <div class="muted small" title=${entityId ?? ""}>
+            ${entityId ? html`${entityId}${note ? ` · ${note}` : ""}` : t("home.not_configured")}
+          </div>
+        </div>
+        ${entityId
+          ? html`<span class="value ${missing || unavailable ? "bad" : ""}">${stateText(this.hass, entityId)}</span>`
+          : nothing}
       </div>
     `;
   }
@@ -132,22 +185,45 @@ export class RainCastSourcesCard extends LitElement {
     shared,
     controlStyles,
     css`
-      dl {
-        display: grid;
-        grid-template-columns: auto 1fr;
-        gap: 6px 16px;
-        margin: 0;
-        font-size: 0.9rem;
-      }
-      dt {
+      h3 {
+        margin: 12px 0 4px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
         color: var(--rc-muted);
       }
-      dd {
-        margin: 0;
-        text-align: right;
+      h3:first-of-type {
+        margin-top: 0;
+      }
+      .entity {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 4px 0;
+      }
+      .grow {
+        flex: 1;
+        min-width: 0;
+      }
+      .grow .small {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+      }
+      .value {
+        white-space: nowrap;
+        font-size: 0.9rem;
+      }
+      .value.bad {
+        color: var(--rc-error);
+      }
+      .zone-name {
+        font-size: 0.85rem;
+        margin-top: 4px;
+      }
+      .zone-name ~ .entity {
+        padding-left: 12px;
       }
     `,
   ];

@@ -576,14 +576,14 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
         state = self.hass.states.get(valve)
         return (state is not None) and (state.state in OPEN_STATES)
 
-    def _native_start(self, valve: str) -> tuple[str, str] | None:
+    def native_start(self, valve: str) -> tuple[str, str] | None:
         entity = er.async_get(self.hass).async_get(valve)
         if (entity is None) or (split_entity_id(valve)[0] != "valve"):
             return None
         return NATIVE_START.get(entity.platform)
 
     async def _async_start_valve(self, valve: str, minutes: int) -> None:
-        native = self._native_start(valve)
+        native = self.native_start(valve)
         if native is not None:
             await self._async_call(native[0], native[1], {ATTR_ENTITY_ID: valve, "minutes": minutes})
             return
