@@ -15,6 +15,8 @@ from enum import StrEnum
 
 class StartMode(StrEnum):
     BEFORE_SUNRISE = "before_sunrise"
+    SUNRISE = "sunrise"
+    SUNSET = "sunset"
     AT_TIME = "at_time"
     OFF = "off"
 
@@ -26,23 +28,25 @@ def next_start(
     sunrise_after: Callable[[datetime], datetime],
     offset_h: float,
     at: time,
+    sunset_after: Callable[[datetime], datetime] | None = None,
 ) -> datetime | None:
-    """Next start after now; now has to carry the local time zone."""
+    """Next start after now; now has to carry the local time zone.
+
+    BEFORE_SUNRISE starts offset_h hours before sunrise; SUNRISE and SUNSET
+    start offset_h hours after the event, earlier for a negative offset.
+    """
     if mode is StartMode.AT_TIME:
         start = datetime.combine(now.date(), at, tzinfo=now.tzinfo)
         if start <= now:
             start = datetime.combine(now.date() + timedelta(days=1), at, tzinfo=now.tzinfo)
         return start
 
-    if mode is StartMode.BEFORE_SUNRISE:
-        offset = timedelta(hours=offset_h)
-        sunrise = sunrise_after(now)
-        # Between today's start and sunrise the next start belongs to tomorrow's sunrise.
-        if sunrise - offset <= now:
-            sunrise = sunrise_after(sunrise + timedelta(minutes=1))
-        return sunrise - offset
-
-    return None
+    event_after = sunset_after if mode is StartMode.SUNSET else sunrise_after
+    shift = timedelta(hours=-offset_h if mode is StartMode.BEFORE_SUNRISE else offset_h)
+    if (mode is StartMode.OFF) or (event_after is None):
+        return None
+    # The event whose start is still ahead: today's when its start has not passed yet.
+    return event_after(now - shift) + shift
 
 
 def in_season(day: date, first_month: int, last_month: int) -> bool:
