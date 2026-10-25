@@ -1,0 +1,22 @@
+{
+  "domain": "raincast",
+  "name": "RainCast",
+  "after_dependencies": [
+    "frontend",
+    "http",
+    "panel_custom"
+  ],
+  "codeowners": [
+    "@Holczyns"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "websocket_api"
+  ],
+  "documentation": "https://github.com/Holczyns/raincast",
+  "integration_type": "hub",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/Holczyns/raincast/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}
