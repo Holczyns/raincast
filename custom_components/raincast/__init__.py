@@ -12,6 +12,7 @@ from homeassistant.helpers.typing import ConfigType
 from .const import DOMAIN
 from .coordinator import RainCastCoordinator
 from .entity import controller_device_info
+from .frontend import async_register_frontend
 from .problems import async_clear_issues
 from .websocket import async_register_commands
 
@@ -33,6 +34,7 @@ type RainCastConfigEntry = ConfigEntry[RainCastCoordinator]
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     async_register_commands(hass)
+    await async_register_frontend(hass)
     return True
 
 

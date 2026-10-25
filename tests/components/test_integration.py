@@ -263,3 +263,54 @@ async def test_valves_of_an_interrupted_run_are_closed(hass: HomeAssistant, gard
     await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
     assert hass.states.get(VALVE_1).state == "off"
+
+
+async def test_panel_commands_change_zones_and_sources(hass: HomeAssistant, garden, hass_ws_client) -> None:
+    entry = await run_wizard(hass)
+    client = await hass_ws_client(hass)
+
+    await client.send_json_auto_id({"type": "raincast/entries"})
+    [described] = (await client.receive_json())["result"]
+    [zone] = described["zones"]
+    assert zone["entities"]["duration_0"].startswith("number.")
+    assert described["sources"]["soil_sensor"] == SOIL
+
+    await client.send_json_auto_id(
+        {
+            "type": "raincast/add_zone",
+            "entry_id": entry.entry_id,
+            "name": "Greenhouse",
+            "valves": [VALVE_2],
+            "roofed": True,
+        }
+    )
+    assert (await client.receive_json())["success"]
+    await hass.async_block_till_done()
+    assert sorted(subentry.title for subentry in entry.subentries.values()) == ["Greenhouse", "Lawn"]
+
+    await client.send_json_auto_id(
+        {
+            "type": "raincast/update_zone",
+            "entry_id": entry.entry_id,
+            "zone_id": zone["id"],
+            "name": "Lawn",
+            "valves": ["switch.missing"],
+            "roofed": False,
+        }
+    )
+    assert not (await client.receive_json())["success"]
+
+    await client.send_json_auto_id({"type": "raincast/remove_zone", "entry_id": entry.entry_id, "zone_id": zone["id"]})
+    assert (await client.receive_json())["success"]
+    await hass.async_block_till_done()
+    assert [subentry.title for subentry in entry.subentries.values()] == ["Greenhouse"]
+
+    await client.send_json_auto_id({"type": "raincast/update_sources", "entry_id": entry.entry_id, "rain_sensor": RAIN})
+    assert (await client.receive_json())["success"]
+    await hass.async_block_till_done()
+    assert "soil_sensor" not in entry.data
+
+    await client.send_json_auto_id({"type": "raincast/set_options", "entry_id": entry.entry_id, "notify_service": None})
+    assert (await client.receive_json())["success"]
+    await hass.async_block_till_done()
+    assert "notify_service" not in entry.options
