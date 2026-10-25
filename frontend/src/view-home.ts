@@ -78,13 +78,24 @@ export class RainCastHome extends LitElement {
   }
 
   render() {
+    const t = this.localize;
+    const mower = !!this.entry.sources.mower && !!this.entry.entities.mowing;
     return html`
+      ${this.renderProblems()}
+      <h1 class="section"><ha-icon icon="mdi:sprinkler-variant"></ha-icon>${t("section.watering")}</h1>
       <div class="layout">
-        <div class="column">
-          ${this.renderStatus()} ${this.renderMower()} ${this.renderWeather()} ${this.renderProblems()}
-        </div>
+        <div class="column">${this.renderStatus()} ${this.renderWeather()}</div>
         <div class="zones">${this.entry.zones.map((zone) => this.renderZone(zone))}</div>
       </div>
+      ${mower
+        ? html`
+            <h1 class="section"><ha-icon icon="mdi:robot-mower-outline"></ha-icon>${t("section.mowing")}</h1>
+            <div class="layout">
+              <div class="column">${this.renderMower()}</div>
+              <div class="column">${this.entry.sources.weather ? this.renderRainCard() : nothing}</div>
+            </div>
+          `
+        : nothing}
     `;
   }
 
@@ -186,32 +197,45 @@ export class RainCastHome extends LitElement {
         <h2><ha-icon icon="mdi:weather-partly-rainy"></ha-icon>${t("home.weather")}</h2>
         ${this.renderGauge(t("home.rain"), s.rain_sensor, e.rain_max, "mm")}
         ${s.outdoor_sensor ? this.renderGauge(t("home.outdoor"), s.outdoor_sensor, e.frost_min, "°C", true) : nothing}
-        ${s.weather ? this.renderRain() : nothing}
         <p class="muted small">${t("home.weather_hint")}</p>
       </section>
     `;
   }
 
   /** Rain now, since the last rain and until the next one, from the weather entity. */
-  private renderRain(): TemplateResult {
+  /** Rain now, since the last rain and until the next one, against the mower's limits. */
+  private renderRainCard(): TemplateResult {
     const t = this.localize;
     const e = this.entry.entities;
     const raining = isOn(this.hass, e.raining);
     const since = numberState(this.hass, e.hours_since_rain);
     const ahead = numberState(this.hass, e.hours_to_rain);
+    const dry = numberState(this.hass, e.dry_hours);
+    const window = numberState(this.hass, e.rain_ahead_hours);
+    const recent = (since !== undefined) && (dry !== undefined) && (since < dry);
+    const soon = (ahead !== undefined) && (window !== undefined) && (ahead < window);
     return html`
-      <div class="gauge">
-        <span>${t("home.rain_now")}</span>
-        <span class=${raining ? "warn-text" : ""}>${t(raining ? "home.raining" : "home.dry")}</span>
-      </div>
-      <div class="gauge">
-        <span>${t("home.last_rain")}</span>
-        <span>${since === undefined ? "–" : t("home.hours_ago", { hours: formatNumber(since, 1) })}</span>
-      </div>
-      <div class="gauge">
-        <span>${t("home.next_rain")}</span>
-        <span>${ahead === undefined ? t("home.no_rain_ahead") : t("home.in_hours", { hours: formatNumber(ahead, 1) })}</span>
-      </div>
+      <section class="card">
+        <h2><ha-icon icon="mdi:weather-pouring"></ha-icon>${t("home.rain_card")}</h2>
+        <div class="gauge">
+          <span>${t("home.rain_now")}</span>
+          <span class=${raining ? "warn-text" : ""}>${t(raining ? "home.raining" : "home.dry")}</span>
+        </div>
+        <div class="gauge">
+          <span>${t("home.last_rain")}</span>
+          <span class=${recent ? "warn-text" : ""}>
+            ${since === undefined ? "–" : t("home.hours_ago", { hours: formatNumber(since, 1) })}
+            <span class="muted small">/ ${t("home.dry_after", { hours: formatNumber(dry, 0) })}</span>
+          </span>
+        </div>
+        <div class="gauge">
+          <span>${t("home.next_rain")}</span>
+          <span class=${soon ? "warn-text" : ""}>
+            ${ahead === undefined ? t("home.no_rain_ahead") : t("home.in_hours", { hours: formatNumber(ahead, 1) })}
+            <span class="muted small">/ ${t("home.ahead_limit", { hours: formatNumber(window, 1) })}</span>
+          </span>
+        </div>
+      </section>
     `;
   }
 
@@ -460,6 +484,24 @@ export class RainCastHome extends LitElement {
         grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
         gap: var(--rc-gap);
         align-items: start;
+      }
+      h1.section {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 28px 0 12px;
+        font-size: 1.1rem;
+        font-weight: 500;
+      }
+      h1.section:first-of-type {
+        margin-top: 4px;
+      }
+      h1.section ha-icon {
+        --mdc-icon-size: 22px;
+        color: var(--primary-color);
+      }
+      .problems {
+        margin-bottom: var(--rc-gap);
       }
       .column {
         display: flex;

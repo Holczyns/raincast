@@ -1,6 +1,6 @@
-var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&&"adoptedStyleSheets"in Document.prototype&&"replace"in CSSStyleSheet.prototype,J=Symbol(),wt=new WeakMap,O=class{constructor(e,t,s){if(this._$cssResult$=!0,s!==J)throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");this.cssText=e,this.t=t}get styleSheet(){let e=this.o,t=this.t;if(B&&e===void 0){let s=t!==void 0&&t.length===1;s&&(e=wt.get(t)),e===void 0&&((this.o=e=new CSSStyleSheet).replaceSync(this.cssText),s&&wt.set(t,e))}return e}toString(){return this.cssText}},_t=i=>new O(typeof i=="string"?i:i+"",void 0,J),f=(i,...e)=>{let t=i.length===1?i[0]:e.reduce((s,n,r)=>s+(o=>{if(o._$cssResult$===!0)return o.cssText;if(typeof o=="number")return o;throw Error("Value passed to 'css' function must be a 'css' function result: "+o+". Use 'unsafeCSS' to pass non-literal values, but take care to ensure page security.")})(n)+i[r+1],i[0]);return new O(t,i,J)},$t=(i,e)=>{if(B)i.adoptedStyleSheets=e.map(t=>t instanceof CSSStyleSheet?t:t.styleSheet);else for(let t of e){let s=document.createElement("style"),n=j.litNonce;n!==void 0&&s.setAttribute("nonce",n),s.textContent=t.cssText,i.appendChild(s)}},Y=B?i=>i:i=>i instanceof CSSStyleSheet?(e=>{let t="";for(let s of e.cssRules)t+=s.cssText;return _t(t)})(i):i;var{is:ee,defineProperty:se,getOwnPropertyDescriptor:ne,getOwnPropertyNames:ie,getOwnPropertySymbols:re,getPrototypeOf:ae}=Object,K=globalThis,xt=K.trustedTypes,oe=xt?xt.emptyScript:"",le=K.reactiveElementPolyfillSupport,Z=(i,e)=>i,X={toAttribute(i,e){switch(e){case Boolean:i=i?oe:null;break;case Object:case Array:i=i==null?i:JSON.stringify(i)}return i},fromAttribute(i,e){let t=i;switch(e){case Boolean:t=i!==null;break;case Number:t=i===null?null:Number(i);break;case Object:case Array:try{t=JSON.parse(i)}catch{t=null}}return t}},At=(i,e)=>!ee(i,e),zt={attribute:!0,type:String,converter:X,reflect:!1,useDefault:!1,hasChanged:At};Symbol.metadata??=Symbol("metadata"),K.litPropertyMetadata??=new WeakMap;var x=class extends HTMLElement{static addInitializer(e){this._$Ei(),(this.l??=[]).push(e)}static get observedAttributes(){return this.finalize(),this._$Eh&&[...this._$Eh.keys()]}static createProperty(e,t=zt){if(t.state&&(t.attribute=!1),this._$Ei(),this.prototype.hasOwnProperty(e)&&((t=Object.create(t)).wrapped=!0),this.elementProperties.set(e,t),!t.noAccessor){let s=Symbol(),n=this.getPropertyDescriptor(e,s,t);n!==void 0&&se(this.prototype,e,n)}}static getPropertyDescriptor(e,t,s){let{get:n,set:r}=ne(this.prototype,e)??{get(){return this[t]},set(o){this[t]=o}};return{get:n,set(o){let h=n?.call(this);r?.call(this,o),this.requestUpdate(e,h,s)},configurable:!0,enumerable:!0}}static getPropertyOptions(e){return this.elementProperties.get(e)??zt}static _$Ei(){if(this.hasOwnProperty(Z("elementProperties")))return;let e=ae(this);e.finalize(),e.l!==void 0&&(this.l=[...e.l]),this.elementProperties=new Map(e.elementProperties)}static finalize(){if(this.hasOwnProperty(Z("finalized")))return;if(this.finalized=!0,this._$Ei(),this.hasOwnProperty(Z("properties"))){let t=this.properties,s=[...ie(t),...re(t)];for(let n of s)this.createProperty(n,t[n])}let e=this[Symbol.metadata];if(e!==null){let t=litPropertyMetadata.get(e);if(t!==void 0)for(let[s,n]of t)this.elementProperties.set(s,n)}this._$Eh=new Map;for(let[t,s]of this.elementProperties){let n=this._$Eu(t,s);n!==void 0&&this._$Eh.set(n,t)}this.elementStyles=this.finalizeStyles(this.styles)}static finalizeStyles(e){let t=[];if(Array.isArray(e)){let s=new Set(e.flat(1/0).reverse());for(let n of s)t.unshift(Y(n))}else e!==void 0&&t.push(Y(e));return t}static _$Eu(e,t){let s=t.attribute;return s===!1?void 0:typeof s=="string"?s:typeof e=="string"?e.toLowerCase():void 0}constructor(){super(),this._$Ep=void 0,this.isUpdatePending=!1,this.hasUpdated=!1,this._$Em=null,this._$Ev()}_$Ev(){this._$ES=new Promise(e=>this.enableUpdating=e),this._$AL=new Map,this._$E_(),this.requestUpdate(),this.constructor.l?.forEach(e=>e(this))}addController(e){(this._$EO??=new Set).add(e),this.renderRoot!==void 0&&this.isConnected&&e.hostConnected?.()}removeController(e){this._$EO?.delete(e)}_$E_(){let e=new Map,t=this.constructor.elementProperties;for(let s of t.keys())this.hasOwnProperty(s)&&(e.set(s,this[s]),delete this[s]);e.size>0&&(this._$Ep=e)}createRenderRoot(){let e=this.shadowRoot??this.attachShadow(this.constructor.shadowRootOptions);return $t(e,this.constructor.elementStyles),e}connectedCallback(){this.renderRoot??=this.createRenderRoot(),this.enableUpdating(!0),this._$EO?.forEach(e=>e.hostConnected?.())}enableUpdating(e){}disconnectedCallback(){this._$EO?.forEach(e=>e.hostDisconnected?.())}attributeChangedCallback(e,t,s){this._$AK(e,s)}_$ET(e,t){let s=this.constructor.elementProperties.get(e),n=this.constructor._$Eu(e,s);if(n!==void 0&&s.reflect===!0){let r=(s.converter?.toAttribute!==void 0?s.converter:X).toAttribute(t,s.type);this._$Em=e,r==null?this.removeAttribute(n):this.setAttribute(n,r),this._$Em=null}}_$AK(e,t){let s=this.constructor,n=s._$Eh.get(e);if(n!==void 0&&this._$Em!==n){let r=s.getPropertyOptions(n),o=typeof r.converter=="function"?{fromAttribute:r.converter}:r.converter?.fromAttribute!==void 0?r.converter:X;this._$Em=n;let h=o.fromAttribute(t,r.type);this[n]=h??this._$Ej?.get(n)??h,this._$Em=null}}requestUpdate(e,t,s,n=!1,r){if(e!==void 0){let o=this.constructor;if(n===!1&&(r=this[e]),s??=o.getPropertyOptions(e),!((s.hasChanged??At)(r,t)||s.useDefault&&s.reflect&&r===this._$Ej?.get(e)&&!this.hasAttribute(o._$Eu(e,s))))return;this.C(e,t,s)}this.isUpdatePending===!1&&(this._$ES=this._$EP())}C(e,t,{useDefault:s,reflect:n,wrapped:r},o){s&&!(this._$Ej??=new Map).has(e)&&(this._$Ej.set(e,o??t??this[e]),r!==!0||o!==void 0)||(this._$AL.has(e)||(this.hasUpdated||s||(t=void 0),this._$AL.set(e,t)),n===!0&&this._$Em!==e&&(this._$Eq??=new Set).add(e))}async _$EP(){this.isUpdatePending=!0;try{await this._$ES}catch(t){Promise.reject(t)}let e=this.scheduleUpdate();return e!=null&&await e,!this.isUpdatePending}scheduleUpdate(){return this.performUpdate()}performUpdate(){if(!this.isUpdatePending)return;if(!this.hasUpdated){if(this.renderRoot??=this.createRenderRoot(),this._$Ep){for(let[n,r]of this._$Ep)this[n]=r;this._$Ep=void 0}let s=this.constructor.elementProperties;if(s.size>0)for(let[n,r]of s){let{wrapped:o}=r,h=this[n];o!==!0||this._$AL.has(n)||h===void 0||this.C(n,void 0,r,h)}}let e=!1,t=this._$AL;try{e=this.shouldUpdate(t),e?(this.willUpdate(t),this._$EO?.forEach(s=>s.hostUpdate?.()),this.update(t)):this._$EM()}catch(s){throw e=!1,this._$EM(),s}e&&this._$AE(t)}willUpdate(e){}_$AE(e){this._$EO?.forEach(t=>t.hostUpdated?.()),this.hasUpdated||(this.hasUpdated=!0,this.firstUpdated(e)),this.updated(e)}_$EM(){this._$AL=new Map,this.isUpdatePending=!1}get updateComplete(){return this.getUpdateComplete()}getUpdateComplete(){return this._$ES}shouldUpdate(e){return!0}update(e){this._$Eq&&=this._$Eq.forEach(t=>this._$ET(t,this[t])),this._$EM()}updated(e){}firstUpdated(e){}};x.elementStyles=[],x.shadowRootOptions={mode:"open"},x[Z("elementProperties")]=new Map,x[Z("finalized")]=new Map,le?.({ReactiveElement:x}),(K.reactiveElementVersions??=[]).push("2.1.2");var rt=globalThis,Et=i=>i,G=rt.trustedTypes,kt=G?G.createPolicy("lit-html",{createHTML:i=>i}):void 0,Ht="$lit$",E=`lit$${Math.random().toFixed(9).slice(2)}$`,Lt="?"+E,de=`<${Lt}>`,R=document,U=()=>R.createComment(""),W=i=>i===null||typeof i!="object"&&typeof i!="function",at=Array.isArray,ce=i=>at(i)||typeof i?.[Symbol.iterator]=="function",Q=`[ 	
+var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&&"adoptedStyleSheets"in Document.prototype&&"replace"in CSSStyleSheet.prototype,J=Symbol(),bt=new WeakMap,O=class{constructor(e,t,s){if(this._$cssResult$=!0,s!==J)throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");this.cssText=e,this.t=t}get styleSheet(){let e=this.o,t=this.t;if(B&&e===void 0){let s=t!==void 0&&t.length===1;s&&(e=bt.get(t)),e===void 0&&((this.o=e=new CSSStyleSheet).replaceSync(this.cssText),s&&bt.set(t,e))}return e}toString(){return this.cssText}},$t=i=>new O(typeof i=="string"?i:i+"",void 0,J),g=(i,...e)=>{let t=i.length===1?i[0]:e.reduce((s,n,r)=>s+(o=>{if(o._$cssResult$===!0)return o.cssText;if(typeof o=="number")return o;throw Error("Value passed to 'css' function must be a 'css' function result: "+o+". Use 'unsafeCSS' to pass non-literal values, but take care to ensure page security.")})(n)+i[r+1],i[0]);return new O(t,i,J)},_t=(i,e)=>{if(B)i.adoptedStyleSheets=e.map(t=>t instanceof CSSStyleSheet?t:t.styleSheet);else for(let t of e){let s=document.createElement("style"),n=j.litNonce;n!==void 0&&s.setAttribute("nonce",n),s.textContent=t.cssText,i.appendChild(s)}},Y=B?i=>i:i=>i instanceof CSSStyleSheet?(e=>{let t="";for(let s of e.cssRules)t+=s.cssText;return $t(t)})(i):i;var{is:ee,defineProperty:se,getOwnPropertyDescriptor:ne,getOwnPropertyNames:ie,getOwnPropertySymbols:re,getPrototypeOf:ae}=Object,K=globalThis,xt=K.trustedTypes,oe=xt?xt.emptyScript:"",le=K.reactiveElementPolyfillSupport,Z=(i,e)=>i,X={toAttribute(i,e){switch(e){case Boolean:i=i?oe:null;break;case Object:case Array:i=i==null?i:JSON.stringify(i)}return i},fromAttribute(i,e){let t=i;switch(e){case Boolean:t=i!==null;break;case Number:t=i===null?null:Number(i);break;case Object:case Array:try{t=JSON.parse(i)}catch{t=null}}return t}},At=(i,e)=>!ee(i,e),zt={attribute:!0,type:String,converter:X,reflect:!1,useDefault:!1,hasChanged:At};Symbol.metadata??=Symbol("metadata"),K.litPropertyMetadata??=new WeakMap;var x=class extends HTMLElement{static addInitializer(e){this._$Ei(),(this.l??=[]).push(e)}static get observedAttributes(){return this.finalize(),this._$Eh&&[...this._$Eh.keys()]}static createProperty(e,t=zt){if(t.state&&(t.attribute=!1),this._$Ei(),this.prototype.hasOwnProperty(e)&&((t=Object.create(t)).wrapped=!0),this.elementProperties.set(e,t),!t.noAccessor){let s=Symbol(),n=this.getPropertyDescriptor(e,s,t);n!==void 0&&se(this.prototype,e,n)}}static getPropertyDescriptor(e,t,s){let{get:n,set:r}=ne(this.prototype,e)??{get(){return this[t]},set(o){this[t]=o}};return{get:n,set(o){let c=n?.call(this);r?.call(this,o),this.requestUpdate(e,c,s)},configurable:!0,enumerable:!0}}static getPropertyOptions(e){return this.elementProperties.get(e)??zt}static _$Ei(){if(this.hasOwnProperty(Z("elementProperties")))return;let e=ae(this);e.finalize(),e.l!==void 0&&(this.l=[...e.l]),this.elementProperties=new Map(e.elementProperties)}static finalize(){if(this.hasOwnProperty(Z("finalized")))return;if(this.finalized=!0,this._$Ei(),this.hasOwnProperty(Z("properties"))){let t=this.properties,s=[...ie(t),...re(t)];for(let n of s)this.createProperty(n,t[n])}let e=this[Symbol.metadata];if(e!==null){let t=litPropertyMetadata.get(e);if(t!==void 0)for(let[s,n]of t)this.elementProperties.set(s,n)}this._$Eh=new Map;for(let[t,s]of this.elementProperties){let n=this._$Eu(t,s);n!==void 0&&this._$Eh.set(n,t)}this.elementStyles=this.finalizeStyles(this.styles)}static finalizeStyles(e){let t=[];if(Array.isArray(e)){let s=new Set(e.flat(1/0).reverse());for(let n of s)t.unshift(Y(n))}else e!==void 0&&t.push(Y(e));return t}static _$Eu(e,t){let s=t.attribute;return s===!1?void 0:typeof s=="string"?s:typeof e=="string"?e.toLowerCase():void 0}constructor(){super(),this._$Ep=void 0,this.isUpdatePending=!1,this.hasUpdated=!1,this._$Em=null,this._$Ev()}_$Ev(){this._$ES=new Promise(e=>this.enableUpdating=e),this._$AL=new Map,this._$E_(),this.requestUpdate(),this.constructor.l?.forEach(e=>e(this))}addController(e){(this._$EO??=new Set).add(e),this.renderRoot!==void 0&&this.isConnected&&e.hostConnected?.()}removeController(e){this._$EO?.delete(e)}_$E_(){let e=new Map,t=this.constructor.elementProperties;for(let s of t.keys())this.hasOwnProperty(s)&&(e.set(s,this[s]),delete this[s]);e.size>0&&(this._$Ep=e)}createRenderRoot(){let e=this.shadowRoot??this.attachShadow(this.constructor.shadowRootOptions);return _t(e,this.constructor.elementStyles),e}connectedCallback(){this.renderRoot??=this.createRenderRoot(),this.enableUpdating(!0),this._$EO?.forEach(e=>e.hostConnected?.())}enableUpdating(e){}disconnectedCallback(){this._$EO?.forEach(e=>e.hostDisconnected?.())}attributeChangedCallback(e,t,s){this._$AK(e,s)}_$ET(e,t){let s=this.constructor.elementProperties.get(e),n=this.constructor._$Eu(e,s);if(n!==void 0&&s.reflect===!0){let r=(s.converter?.toAttribute!==void 0?s.converter:X).toAttribute(t,s.type);this._$Em=e,r==null?this.removeAttribute(n):this.setAttribute(n,r),this._$Em=null}}_$AK(e,t){let s=this.constructor,n=s._$Eh.get(e);if(n!==void 0&&this._$Em!==n){let r=s.getPropertyOptions(n),o=typeof r.converter=="function"?{fromAttribute:r.converter}:r.converter?.fromAttribute!==void 0?r.converter:X;this._$Em=n;let c=o.fromAttribute(t,r.type);this[n]=c??this._$Ej?.get(n)??c,this._$Em=null}}requestUpdate(e,t,s,n=!1,r){if(e!==void 0){let o=this.constructor;if(n===!1&&(r=this[e]),s??=o.getPropertyOptions(e),!((s.hasChanged??At)(r,t)||s.useDefault&&s.reflect&&r===this._$Ej?.get(e)&&!this.hasAttribute(o._$Eu(e,s))))return;this.C(e,t,s)}this.isUpdatePending===!1&&(this._$ES=this._$EP())}C(e,t,{useDefault:s,reflect:n,wrapped:r},o){s&&!(this._$Ej??=new Map).has(e)&&(this._$Ej.set(e,o??t??this[e]),r!==!0||o!==void 0)||(this._$AL.has(e)||(this.hasUpdated||s||(t=void 0),this._$AL.set(e,t)),n===!0&&this._$Em!==e&&(this._$Eq??=new Set).add(e))}async _$EP(){this.isUpdatePending=!0;try{await this._$ES}catch(t){Promise.reject(t)}let e=this.scheduleUpdate();return e!=null&&await e,!this.isUpdatePending}scheduleUpdate(){return this.performUpdate()}performUpdate(){if(!this.isUpdatePending)return;if(!this.hasUpdated){if(this.renderRoot??=this.createRenderRoot(),this._$Ep){for(let[n,r]of this._$Ep)this[n]=r;this._$Ep=void 0}let s=this.constructor.elementProperties;if(s.size>0)for(let[n,r]of s){let{wrapped:o}=r,c=this[n];o!==!0||this._$AL.has(n)||c===void 0||this.C(n,void 0,r,c)}}let e=!1,t=this._$AL;try{e=this.shouldUpdate(t),e?(this.willUpdate(t),this._$EO?.forEach(s=>s.hostUpdate?.()),this.update(t)):this._$EM()}catch(s){throw e=!1,this._$EM(),s}e&&this._$AE(t)}willUpdate(e){}_$AE(e){this._$EO?.forEach(t=>t.hostUpdated?.()),this.hasUpdated||(this.hasUpdated=!0,this.firstUpdated(e)),this.updated(e)}_$EM(){this._$AL=new Map,this.isUpdatePending=!1}get updateComplete(){return this.getUpdateComplete()}getUpdateComplete(){return this._$ES}shouldUpdate(e){return!0}update(e){this._$Eq&&=this._$Eq.forEach(t=>this._$ET(t,this[t])),this._$EM()}updated(e){}firstUpdated(e){}};x.elementStyles=[],x.shadowRootOptions={mode:"open"},x[Z("elementProperties")]=new Map,x[Z("finalized")]=new Map,le?.({ReactiveElement:x}),(K.reactiveElementVersions??=[]).push("2.1.2");var rt=globalThis,Et=i=>i,G=rt.trustedTypes,kt=G?G.createPolicy("lit-html",{createHTML:i=>i}):void 0,Ht="$lit$",E=`lit$${Math.random().toFixed(9).slice(2)}$`,Lt="?"+E,de=`<${Lt}>`,R=document,W=()=>R.createComment(""),U=i=>i===null||typeof i!="object"&&typeof i!="function",at=Array.isArray,ce=i=>at(i)||typeof i?.[Symbol.iterator]=="function",Q=`[ 	
 \f\r]`,I=/<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g,St=/-->/g,Tt=/>/g,S=RegExp(`>|${Q}(?:([^\\s"'>=/]+)(${Q}*=${Q}*(?:[^ 	
-\f\r"'\`<>=]|("|')|))|$)`,"g"),Rt=/'/g,Ct=/"/g,Nt=/^(?:script|style|textarea|title)$/i,ot=i=>(e,...t)=>({_$litType$:i,strings:e,values:t}),a=ot(1),Pe=ot(2),Oe=ot(3),C=Symbol.for("lit-noChange"),c=Symbol.for("lit-nothing"),Mt=new WeakMap,T=R.createTreeWalker(R,129);function Pt(i,e){if(!at(i)||!i.hasOwnProperty("raw"))throw Error("invalid template strings array");return kt!==void 0?kt.createHTML(e):e}var he=(i,e)=>{let t=i.length-1,s=[],n,r=e===2?"<svg>":e===3?"<math>":"",o=I;for(let h=0;h<t;h++){let d=i[h],l,p,u=-1,g=0;for(;g<d.length&&(o.lastIndex=g,p=o.exec(d),p!==null);)g=o.lastIndex,o===I?p[1]==="!--"?o=St:p[1]!==void 0?o=Tt:p[2]!==void 0?(Nt.test(p[2])&&(n=RegExp("</"+p[2],"g")),o=S):p[3]!==void 0&&(o=S):o===S?p[0]===">"?(o=n??I,u=-1):p[1]===void 0?u=-2:(u=o.lastIndex-p[2].length,l=p[1],o=p[3]===void 0?S:p[3]==='"'?Ct:Rt):o===Ct||o===Rt?o=S:o===St||o===Tt?o=I:(o=S,n=void 0);let $=o===S&&i[h+1].startsWith("/>")?" ":"";r+=o===I?d+de:u>=0?(s.push(l),d.slice(0,u)+Ht+d.slice(u)+E+$):d+E+(u===-2?h:$)}return[Pt(i,r+(i[t]||"<?>")+(e===2?"</svg>":e===3?"</math>":"")),s]},D=class i{constructor({strings:e,_$litType$:t},s){let n;this.parts=[];let r=0,o=0,h=e.length-1,d=this.parts,[l,p]=he(e,t);if(this.el=i.createElement(l,s),T.currentNode=this.el.content,t===2||t===3){let u=this.el.content.firstChild;u.replaceWith(...u.childNodes)}for(;(n=T.nextNode())!==null&&d.length<h;){if(n.nodeType===1){if(n.hasAttributes())for(let u of n.getAttributeNames())if(u.endsWith(Ht)){let g=p[o++],$=n.getAttribute(u).split(E),A=/([.?@])?(.*)/.exec(g);d.push({type:1,index:r,name:A[2],strings:$,ctor:A[1]==="."?et:A[1]==="?"?st:A[1]==="@"?nt:P}),n.removeAttribute(u)}else u.startsWith(E)&&(d.push({type:6,index:r}),n.removeAttribute(u));if(Nt.test(n.tagName)){let u=n.textContent.split(E),g=u.length-1;if(g>0){n.textContent=G?G.emptyScript:"";for(let $=0;$<g;$++)n.append(u[$],U()),T.nextNode(),d.push({type:2,index:++r});n.append(u[g],U())}}}else if(n.nodeType===8)if(n.data===Lt)d.push({type:2,index:r});else{let u=-1;for(;(u=n.data.indexOf(E,u+1))!==-1;)d.push({type:7,index:r}),u+=E.length-1}r++}}static createElement(e,t){let s=R.createElement("template");return s.innerHTML=e,s}};function N(i,e,t=i,s){if(e===C)return e;let n=s!==void 0?t._$Co?.[s]:t._$Cl,r=W(e)?void 0:e._$litDirective$;return n?.constructor!==r&&(n?._$AO?.(!1),r===void 0?n=void 0:(n=new r(i),n._$AT(i,t,s)),s!==void 0?(t._$Co??=[])[s]=n:t._$Cl=n),n!==void 0&&(e=N(i,n._$AS(i,e.values),n,s)),e}var tt=class{constructor(e,t){this._$AV=[],this._$AN=void 0,this._$AD=e,this._$AM=t}get parentNode(){return this._$AM.parentNode}get _$AU(){return this._$AM._$AU}u(e){let{el:{content:t},parts:s}=this._$AD,n=(e?.creationScope??R).importNode(t,!0);T.currentNode=n;let r=T.nextNode(),o=0,h=0,d=s[0];for(;d!==void 0;){if(o===d.index){let l;d.type===2?l=new F(r,r.nextSibling,this,e):d.type===1?l=new d.ctor(r,d.name,d.strings,this,e):d.type===6&&(l=new it(r,this,e)),this._$AV.push(l),d=s[++h]}o!==d?.index&&(r=T.nextNode(),o++)}return T.currentNode=R,n}p(e){let t=0;for(let s of this._$AV)s!==void 0&&(s.strings!==void 0?(s._$AI(e,s,t),t+=s.strings.length-2):s._$AI(e[t])),t++}},F=class i{get _$AU(){return this._$AM?._$AU??this._$Cv}constructor(e,t,s,n){this.type=2,this._$AH=c,this._$AN=void 0,this._$AA=e,this._$AB=t,this._$AM=s,this.options=n,this._$Cv=n?.isConnected??!0}get parentNode(){let e=this._$AA.parentNode,t=this._$AM;return t!==void 0&&e?.nodeType===11&&(e=t.parentNode),e}get startNode(){return this._$AA}get endNode(){return this._$AB}_$AI(e,t=this){e=N(this,e,t),W(e)?e===c||e==null||e===""?(this._$AH!==c&&this._$AR(),this._$AH=c):e!==this._$AH&&e!==C&&this._(e):e._$litType$!==void 0?this.$(e):e.nodeType!==void 0?this.T(e):ce(e)?this.k(e):this._(e)}O(e){return this._$AA.parentNode.insertBefore(e,this._$AB)}T(e){this._$AH!==e&&(this._$AR(),this._$AH=this.O(e))}_(e){this._$AH!==c&&W(this._$AH)?this._$AA.nextSibling.data=e:this.T(R.createTextNode(e)),this._$AH=e}$(e){let{values:t,_$litType$:s}=e,n=typeof s=="number"?this._$AC(e):(s.el===void 0&&(s.el=D.createElement(Pt(s.h,s.h[0]),this.options)),s);if(this._$AH?._$AD===n)this._$AH.p(t);else{let r=new tt(n,this),o=r.u(this.options);r.p(t),this.T(o),this._$AH=r}}_$AC(e){let t=Mt.get(e.strings);return t===void 0&&Mt.set(e.strings,t=new D(e)),t}k(e){at(this._$AH)||(this._$AH=[],this._$AR());let t=this._$AH,s,n=0;for(let r of e)n===t.length?t.push(s=new i(this.O(U()),this.O(U()),this,this.options)):s=t[n],s._$AI(r),n++;n<t.length&&(this._$AR(s&&s._$AB.nextSibling,n),t.length=n)}_$AR(e=this._$AA.nextSibling,t){for(this._$AP?.(!1,!0,t);e!==this._$AB;){let s=Et(e).nextSibling;Et(e).remove(),e=s}}setConnected(e){this._$AM===void 0&&(this._$Cv=e,this._$AP?.(e))}},P=class{get tagName(){return this.element.tagName}get _$AU(){return this._$AM._$AU}constructor(e,t,s,n,r){this.type=1,this._$AH=c,this._$AN=void 0,this.element=e,this.name=t,this._$AM=n,this.options=r,s.length>2||s[0]!==""||s[1]!==""?(this._$AH=Array(s.length-1).fill(new String),this.strings=s):this._$AH=c}_$AI(e,t=this,s,n){let r=this.strings,o=!1;if(r===void 0)e=N(this,e,t,0),o=!W(e)||e!==this._$AH&&e!==C,o&&(this._$AH=e);else{let h=e,d,l;for(e=r[0],d=0;d<r.length-1;d++)l=N(this,h[s+d],t,d),l===C&&(l=this._$AH[d]),o||=!W(l)||l!==this._$AH[d],l===c?e=c:e!==c&&(e+=(l??"")+r[d+1]),this._$AH[d]=l}o&&!n&&this.j(e)}j(e){e===c?this.element.removeAttribute(this.name):this.element.setAttribute(this.name,e??"")}},et=class extends P{constructor(){super(...arguments),this.type=3}j(e){this.element[this.name]=e===c?void 0:e}},st=class extends P{constructor(){super(...arguments),this.type=4}j(e){this.element.toggleAttribute(this.name,!!e&&e!==c)}},nt=class extends P{constructor(e,t,s,n,r){super(e,t,s,n,r),this.type=5}_$AI(e,t=this){if((e=N(this,e,t,0)??c)===C)return;let s=this._$AH,n=e===c&&s!==c||e.capture!==s.capture||e.once!==s.once||e.passive!==s.passive,r=e!==c&&(s===c||n);n&&this.element.removeEventListener(this.name,this,s),r&&this.element.addEventListener(this.name,this,e),this._$AH=e}handleEvent(e){typeof this._$AH=="function"?this._$AH.call(this.options?.host??this.element,e):this._$AH.handleEvent(e)}},it=class{constructor(e,t,s){this.element=e,this.type=6,this._$AN=void 0,this._$AM=t,this.options=s}get _$AU(){return this._$AM._$AU}_$AI(e){N(this,e)}};var ue=rt.litHtmlPolyfillSupport;ue?.(D,F),(rt.litHtmlVersions??=[]).push("3.3.3");var Ot=(i,e,t)=>{let s=t?.renderBefore??e,n=s._$litPart$;if(n===void 0){let r=t?.renderBefore??null;s._$litPart$=n=new F(e.insertBefore(U(),r),r,void 0,t??{})}return n._$AI(i),n};var lt=globalThis,m=class extends x{constructor(){super(...arguments),this.renderOptions={host:this},this._$Do=void 0}createRenderRoot(){let e=super.createRenderRoot();return this.renderOptions.renderBefore??=e.firstChild,e}update(e){let t=this.render();this.hasUpdated||(this.renderOptions.isConnected=this.isConnected),super.update(e),this._$Do=Ot(t,this.renderRoot,this.renderOptions)}connectedCallback(){super.connectedCallback(),this._$Do?.setConnected(!0)}disconnectedCallback(){super.disconnectedCallback(),this._$Do?.setConnected(!1)}render(){return C}};m._$litElement$=!0,m.finalized=!0,lt.litElementHydrateSupport?.({LitElement:m});var pe=lt.litElementPolyfillSupport;pe?.({LitElement:m});(lt.litElementVersions??=[]).push("4.2.2");function Zt(i){return i.callWS({type:"raincast/entries"})}function It(i,e,t){return i.callWS({type:"raincast/set_options",entry_id:e,notify_service:t})}function Ut(i,e,t){return i.callWS({type:"raincast/update_sources",entry_id:e,...t})}function Wt(i,e,t){return i.callWS({type:"raincast/add_zone",entry_id:e,...t})}function Dt(i,e,t,s){return i.callWS({type:"raincast/update_zone",entry_id:e,zone_id:t,...s})}function Ft(i,e,t){return i.callWS({type:"raincast/remove_zone",entry_id:e,zone_id:t})}function Vt(i,e){return i.callService("button","press",{entity_id:e})}function V(i){return i.valves.map((e,t)=>i.entities[`duration_${t}`])}function jt(i){return i.valves.map((e,t)=>i.entities[`max_flow_${t}`])}function Bt(i,e,t=new Date){let s=t.getMonth()+1;return i<=e?s>=i&&s<=e:s>=i||s<=e}function dt(i,e){for(let t of i.log){let s=t.zones.find(n=>n.key===e);if(s)return s}}function Kt(i,e,t,s){return i.callWS({type:"raincast/run_zone",entry_id:e,zone_id:t,minutes:s})}var me={loading:"Loading\u2026",no_entry:"No RainCast controller is set up. Add one under Settings \u2192 Devices & services.","tab.home":"Home","tab.history":"History","tab.settings":"Settings","tab.guide":"Guide","home.control_on":"Valve control on","home.dry_run":"Dry run","home.watering":"Watering {zone}","home.valve_ends":"until about {time}","home.next_start":"Next start {day}, {time}","home.planned_now":"{minutes} min due if it started now","home.no_start":"No zone has a start","home.no_start_hint":"Manual runs still work.","home.automatic_off":"Automatic off","home.automatic_off_title":"Automatic watering is off","home.out_of_season":"Out of season","home.outdoor":"Outdoor","home.rain_now":"Rain now","home.raining":"raining","home.dry":"dry","home.last_rain":"Last rain","home.next_rain":"Next rain","home.hours_ago":"{hours} h ago","home.in_hours":"in {hours} h","home.no_rain_ahead":"none in the forecast","home.mower":"Mower","home.mower_state":"Mower","home.next_mowing":"Next mowing","home.mow_now":"Mow now","mow.mowing":"Mowing","mow.ready":"Ready","mow.frost":"Frost","mow.watering":"Watering","mow.watered":"Watered today","mow.raining":"Raining","mow.rained":"Rained recently","mow.rain_ahead":"Rain ahead","mow.unknown":"Unknown","mowmode.sunrise":"From sunrise","mowmode.sunset":"From sunset","mowmode.at_time":"At a fixed time","mowmode.off":"Off","home.frost_below":"frost below {limit} \xB0C","home.stop":"Stop","home.run_due":"Water due zones","home.control_needed":"Turn on Valve control in the settings first.","home.weather":"Weather","home.soil":"Soil moisture","home.rain":"Rain forecast","home.not_configured":"not set","home.no_value":"no value","home.weather_hint":"Zones open to the sky are held while the rain forecast is above its limit, the line in the middle of the bar. Below the frost limit no zone is watered.","home.problems":"Problems","status.watering":"Watering","status.due":"Due","status.waiting":"Waiting","status.frost":"Frost","status.wet_soil":"Soil wet","status.rain_forecast":"Rain forecast","status.no_duration":"No valve time","status.unknown":"Unknown","zone.last_watered":"Last watered","zone.next_due":"Next due","zone.minutes":"{minutes} min","zone.interval":"Water every","zone.never":"never","zone.days_ago":"{days} days ago","zone.every_days":"every {days} days","zone.next_start":"Next start","zone.no_start":"off","zone.soil":"Soil","zone.mower_conflict":"Blocks mowing","zone.mower_conflict_hint":"Watering this zone today keeps the mower in; for zones on the mowed lawn.","zone.start":"Start","zone.start_time":"Start time","zone.sunrise_offset":"Hours before sunrise","zone.soil_max":"Soil limit","zone.soil_sensor":"Soil moisture of this zone","zone.soil_sensor_hint":"Optional, sensor or input number in %. A zone without one does not look at the soil.","zone.water":"Water","zone.last_run_liters":"{liters} l last run","zone.total_liters":"{liters} l in total","zone.flow":"{flow} l/min","zone.time":"Time","zone.max_flow":"Flow limit","zone.max_flow_hint":"A valve whose mean flow goes above its limit is closed and reported, for a broken pipe or sprinkler. 0 turns the check off.","zone.settings":"Settings","zone.manual":"Manual","zone.manual_hint":"Each valve runs for the minutes given, 0 leaves it out. The zone counts as watered only at its own full time.","zone.run_start":"Start","zone.cancel":"Cancel","zone.name":"Name","zone.valves":"Valves, in the order they run","zone.roofed":"Under a roof","zone.roofed_hint":"The rain forecast does not hold a greenhouse or a covered bed; its soil sensor and frost still do.","zone.new_hint":"A new zone starts with a 3-day interval and 15 minutes per valve; both are changed here afterwards.","zone.edit_hint":"Saving reloads RainCast. A valve added here starts with the zone's starting time.","zone.remove_confirm":"Remove {name}? Its entities are removed; recorded history stays.","problem.valve_unavailable":"A valve has been unavailable for 30 minutes.","problem.valve_not_opened":"A valve did not open in its latest run.","problem.valve_not_closed":"A valve still reports open after the stop command.","problem.no_flow":"A valve was open without water through the meter.","problem.flow_high":"A valve was closed for flow above its limit.","problem.weather_lost":"A weather input has had no value for an hour.","history.runs":"Runs","history.no_runs":"No run yet.","history.watered":"{watered} of {planned} min","history.not_opened":"did not open: {valves}","history.interrupted":"Stopped before the end.","history.no_flow":"no water","history.flow_high":"closed, flow too high","history.water":"Water per zone, 30 days","history.weather":"Soil and rain, 7 days","history.valves":"Valves, 7 days","reason.scheduled":"Daily start","reason.manual":"Manual","reason.zone":"Single zone","reason.restart":"Cut off by a restart","mode.before_sunrise":"Before sunrise","mode.at_time":"At a fixed time","mode.off":"Off","src.rain_sensor":"Rain forecast","src.water_meter":"Water meter","src.weather":"Weather","src.outdoor_sensor":"Outdoor temperature","src.weather_entity":"Weather forecast","src.mower_group":"Mower","src.mower":"Lawn mower","src.zone_soil":"soil sensor of the zone","src.water":"Water","src.zones":"Zones","src.native":"run time sent with the start","src.open_close":"opened and closed by RainCast","action.edit":"Edit","action.save":"Save","action.remove":"Remove","action.add_zone":"Add zone","action.add_valve":"Add valve","settings.control_title":"Valves","settings.control":"Valve control","settings.control_hint":"Off: the plan is sent as a dry run and no valve is opened.","settings.control_confirm":"RainCast will open the valves at the daily start. Turn off every other schedule watering the same valves first.","settings.confirm":"Turn on","settings.cancel":"Cancel","settings.automatic":"Automatic watering","settings.automatic_hint":"Off: no zone starts by itself and no plan is sent; manual runs still work.","settings.season":"Season and weather","settings.season_start":"Season starts","settings.season_end":"Season ends","settings.season_hint":"Outside the season no zone starts by itself, for example over the winter. Manual runs still work.","settings.mower":"Mower","settings.automatic_mowing":"Automatic mowing","settings.automatic_mowing_hint":"Off: the mower does not start by itself; Mow now still works.","settings.mower_start":"Start","settings.mower_offset":"Hours after (\u2212before) the event","settings.mower_season_start":"Mowing season starts","settings.mower_season_end":"Mowing season ends","settings.dry_hours":"Dry hours after rain","settings.rain_ahead_hours":"Rain ahead hours","settings.mower_hint":"The mower stays in when a zone that blocks mowing was watered today, while it rains, for the dry hours after rain, when rain is due within the rain ahead hours, and in frost.","settings.rain_max":"Rain limit","settings.frost_min":"Frost limit","settings.limits_hint":"Zones open to the sky are held while more rain is forecast than the rain limit. Below the frost limit no zone starts, roofed or not. Each zone has its own start and soil limit, under Zones.","settings.zone_start_hint":"Watering before sunrise loses the least water to evaporation and leaves the lawn dry by day.","settings.sources":"Connected entities","settings.sources_hint":"Edit changes the weather inputs and the water meter; valves and soil sensors are changed with the pencil of their zone.","settings.reload_hint":"Saving reloads RainCast; dates, intervals and valve times are kept.","settings.zones":"Zones","settings.notifications":"Problems and notifications","settings.no_problems":"No problems right now.","settings.notify_service":"Notify service","settings.notify_none":"No notifications","settings.notify_hint":"Receives the day's plan, the end of every run and problems.","settings.entities":"Entities and devices","settings.admin_only":"Only administrators can change settings."},M="en";function Gt(){return(i,e)=>{let t=me[i]??i;for(let[s,n]of Object.entries(e??{}))t=t.replace(`{${s}}`,String(n));return t}}function v(i,e=1){return i==null||!Number.isFinite(i)?"\u2013":i.toLocaleString(M,{minimumFractionDigits:e,maximumFractionDigits:e})}function k(i){return i.toLocaleTimeString(M,{hour:"2-digit",minute:"2-digit",hourCycle:"h23"})}function H(i){let e=new Date;e.setHours(0,0,0,0);let t=new Date(i);t.setHours(0,0,0,0);let s=Math.round((t.getTime()-e.getTime())/864e5);return s===0?"today":s===1?"tomorrow":s===-1?"yesterday":i.toLocaleDateString(M,{weekday:"short",day:"numeric",month:"short"})}var y=f`
+\f\r"'\`<>=]|("|')|))|$)`,"g"),Rt=/'/g,Ct=/"/g,Nt=/^(?:script|style|textarea|title)$/i,ot=i=>(e,...t)=>({_$litType$:i,strings:e,values:t}),a=ot(1),Pe=ot(2),Oe=ot(3),C=Symbol.for("lit-noChange"),h=Symbol.for("lit-nothing"),Mt=new WeakMap,T=R.createTreeWalker(R,129);function Pt(i,e){if(!at(i)||!i.hasOwnProperty("raw"))throw Error("invalid template strings array");return kt!==void 0?kt.createHTML(e):e}var he=(i,e)=>{let t=i.length-1,s=[],n,r=e===2?"<svg>":e===3?"<math>":"",o=I;for(let c=0;c<t;c++){let d=i[c],l,p,u=-1,v=0;for(;v<d.length&&(o.lastIndex=v,p=o.exec(d),p!==null);)v=o.lastIndex,o===I?p[1]==="!--"?o=St:p[1]!==void 0?o=Tt:p[2]!==void 0?(Nt.test(p[2])&&(n=RegExp("</"+p[2],"g")),o=S):p[3]!==void 0&&(o=S):o===S?p[0]===">"?(o=n??I,u=-1):p[1]===void 0?u=-2:(u=o.lastIndex-p[2].length,l=p[1],o=p[3]===void 0?S:p[3]==='"'?Ct:Rt):o===Ct||o===Rt?o=S:o===St||o===Tt?o=I:(o=S,n=void 0);let _=o===S&&i[c+1].startsWith("/>")?" ":"";r+=o===I?d+de:u>=0?(s.push(l),d.slice(0,u)+Ht+d.slice(u)+E+_):d+E+(u===-2?c:_)}return[Pt(i,r+(i[t]||"<?>")+(e===2?"</svg>":e===3?"</math>":"")),s]},D=class i{constructor({strings:e,_$litType$:t},s){let n;this.parts=[];let r=0,o=0,c=e.length-1,d=this.parts,[l,p]=he(e,t);if(this.el=i.createElement(l,s),T.currentNode=this.el.content,t===2||t===3){let u=this.el.content.firstChild;u.replaceWith(...u.childNodes)}for(;(n=T.nextNode())!==null&&d.length<c;){if(n.nodeType===1){if(n.hasAttributes())for(let u of n.getAttributeNames())if(u.endsWith(Ht)){let v=p[o++],_=n.getAttribute(u).split(E),A=/([.?@])?(.*)/.exec(v);d.push({type:1,index:r,name:A[2],strings:_,ctor:A[1]==="."?et:A[1]==="?"?st:A[1]==="@"?nt:P}),n.removeAttribute(u)}else u.startsWith(E)&&(d.push({type:6,index:r}),n.removeAttribute(u));if(Nt.test(n.tagName)){let u=n.textContent.split(E),v=u.length-1;if(v>0){n.textContent=G?G.emptyScript:"";for(let _=0;_<v;_++)n.append(u[_],W()),T.nextNode(),d.push({type:2,index:++r});n.append(u[v],W())}}}else if(n.nodeType===8)if(n.data===Lt)d.push({type:2,index:r});else{let u=-1;for(;(u=n.data.indexOf(E,u+1))!==-1;)d.push({type:7,index:r}),u+=E.length-1}r++}}static createElement(e,t){let s=R.createElement("template");return s.innerHTML=e,s}};function N(i,e,t=i,s){if(e===C)return e;let n=s!==void 0?t._$Co?.[s]:t._$Cl,r=U(e)?void 0:e._$litDirective$;return n?.constructor!==r&&(n?._$AO?.(!1),r===void 0?n=void 0:(n=new r(i),n._$AT(i,t,s)),s!==void 0?(t._$Co??=[])[s]=n:t._$Cl=n),n!==void 0&&(e=N(i,n._$AS(i,e.values),n,s)),e}var tt=class{constructor(e,t){this._$AV=[],this._$AN=void 0,this._$AD=e,this._$AM=t}get parentNode(){return this._$AM.parentNode}get _$AU(){return this._$AM._$AU}u(e){let{el:{content:t},parts:s}=this._$AD,n=(e?.creationScope??R).importNode(t,!0);T.currentNode=n;let r=T.nextNode(),o=0,c=0,d=s[0];for(;d!==void 0;){if(o===d.index){let l;d.type===2?l=new F(r,r.nextSibling,this,e):d.type===1?l=new d.ctor(r,d.name,d.strings,this,e):d.type===6&&(l=new it(r,this,e)),this._$AV.push(l),d=s[++c]}o!==d?.index&&(r=T.nextNode(),o++)}return T.currentNode=R,n}p(e){let t=0;for(let s of this._$AV)s!==void 0&&(s.strings!==void 0?(s._$AI(e,s,t),t+=s.strings.length-2):s._$AI(e[t])),t++}},F=class i{get _$AU(){return this._$AM?._$AU??this._$Cv}constructor(e,t,s,n){this.type=2,this._$AH=h,this._$AN=void 0,this._$AA=e,this._$AB=t,this._$AM=s,this.options=n,this._$Cv=n?.isConnected??!0}get parentNode(){let e=this._$AA.parentNode,t=this._$AM;return t!==void 0&&e?.nodeType===11&&(e=t.parentNode),e}get startNode(){return this._$AA}get endNode(){return this._$AB}_$AI(e,t=this){e=N(this,e,t),U(e)?e===h||e==null||e===""?(this._$AH!==h&&this._$AR(),this._$AH=h):e!==this._$AH&&e!==C&&this._(e):e._$litType$!==void 0?this.$(e):e.nodeType!==void 0?this.T(e):ce(e)?this.k(e):this._(e)}O(e){return this._$AA.parentNode.insertBefore(e,this._$AB)}T(e){this._$AH!==e&&(this._$AR(),this._$AH=this.O(e))}_(e){this._$AH!==h&&U(this._$AH)?this._$AA.nextSibling.data=e:this.T(R.createTextNode(e)),this._$AH=e}$(e){let{values:t,_$litType$:s}=e,n=typeof s=="number"?this._$AC(e):(s.el===void 0&&(s.el=D.createElement(Pt(s.h,s.h[0]),this.options)),s);if(this._$AH?._$AD===n)this._$AH.p(t);else{let r=new tt(n,this),o=r.u(this.options);r.p(t),this.T(o),this._$AH=r}}_$AC(e){let t=Mt.get(e.strings);return t===void 0&&Mt.set(e.strings,t=new D(e)),t}k(e){at(this._$AH)||(this._$AH=[],this._$AR());let t=this._$AH,s,n=0;for(let r of e)n===t.length?t.push(s=new i(this.O(W()),this.O(W()),this,this.options)):s=t[n],s._$AI(r),n++;n<t.length&&(this._$AR(s&&s._$AB.nextSibling,n),t.length=n)}_$AR(e=this._$AA.nextSibling,t){for(this._$AP?.(!1,!0,t);e!==this._$AB;){let s=Et(e).nextSibling;Et(e).remove(),e=s}}setConnected(e){this._$AM===void 0&&(this._$Cv=e,this._$AP?.(e))}},P=class{get tagName(){return this.element.tagName}get _$AU(){return this._$AM._$AU}constructor(e,t,s,n,r){this.type=1,this._$AH=h,this._$AN=void 0,this.element=e,this.name=t,this._$AM=n,this.options=r,s.length>2||s[0]!==""||s[1]!==""?(this._$AH=Array(s.length-1).fill(new String),this.strings=s):this._$AH=h}_$AI(e,t=this,s,n){let r=this.strings,o=!1;if(r===void 0)e=N(this,e,t,0),o=!U(e)||e!==this._$AH&&e!==C,o&&(this._$AH=e);else{let c=e,d,l;for(e=r[0],d=0;d<r.length-1;d++)l=N(this,c[s+d],t,d),l===C&&(l=this._$AH[d]),o||=!U(l)||l!==this._$AH[d],l===h?e=h:e!==h&&(e+=(l??"")+r[d+1]),this._$AH[d]=l}o&&!n&&this.j(e)}j(e){e===h?this.element.removeAttribute(this.name):this.element.setAttribute(this.name,e??"")}},et=class extends P{constructor(){super(...arguments),this.type=3}j(e){this.element[this.name]=e===h?void 0:e}},st=class extends P{constructor(){super(...arguments),this.type=4}j(e){this.element.toggleAttribute(this.name,!!e&&e!==h)}},nt=class extends P{constructor(e,t,s,n,r){super(e,t,s,n,r),this.type=5}_$AI(e,t=this){if((e=N(this,e,t,0)??h)===C)return;let s=this._$AH,n=e===h&&s!==h||e.capture!==s.capture||e.once!==s.once||e.passive!==s.passive,r=e!==h&&(s===h||n);n&&this.element.removeEventListener(this.name,this,s),r&&this.element.addEventListener(this.name,this,e),this._$AH=e}handleEvent(e){typeof this._$AH=="function"?this._$AH.call(this.options?.host??this.element,e):this._$AH.handleEvent(e)}},it=class{constructor(e,t,s){this.element=e,this.type=6,this._$AN=void 0,this._$AM=t,this.options=s}get _$AU(){return this._$AM._$AU}_$AI(e){N(this,e)}};var ue=rt.litHtmlPolyfillSupport;ue?.(D,F),(rt.litHtmlVersions??=[]).push("3.3.3");var Ot=(i,e,t)=>{let s=t?.renderBefore??e,n=s._$litPart$;if(n===void 0){let r=t?.renderBefore??null;s._$litPart$=n=new F(e.insertBefore(W(),r),r,void 0,t??{})}return n._$AI(i),n};var lt=globalThis,f=class extends x{constructor(){super(...arguments),this.renderOptions={host:this},this._$Do=void 0}createRenderRoot(){let e=super.createRenderRoot();return this.renderOptions.renderBefore??=e.firstChild,e}update(e){let t=this.render();this.hasUpdated||(this.renderOptions.isConnected=this.isConnected),super.update(e),this._$Do=Ot(t,this.renderRoot,this.renderOptions)}connectedCallback(){super.connectedCallback(),this._$Do?.setConnected(!0)}disconnectedCallback(){super.disconnectedCallback(),this._$Do?.setConnected(!1)}render(){return C}};f._$litElement$=!0,f.finalized=!0,lt.litElementHydrateSupport?.({LitElement:f});var pe=lt.litElementPolyfillSupport;pe?.({LitElement:f});(lt.litElementVersions??=[]).push("4.2.2");function Zt(i){return i.callWS({type:"raincast/entries"})}function It(i,e,t){return i.callWS({type:"raincast/set_options",entry_id:e,notify_service:t})}function Wt(i,e,t){return i.callWS({type:"raincast/update_sources",entry_id:e,...t})}function Ut(i,e,t){return i.callWS({type:"raincast/add_zone",entry_id:e,...t})}function Dt(i,e,t,s){return i.callWS({type:"raincast/update_zone",entry_id:e,zone_id:t,...s})}function Ft(i,e,t){return i.callWS({type:"raincast/remove_zone",entry_id:e,zone_id:t})}function Vt(i,e){return i.callService("button","press",{entity_id:e})}function V(i){return i.valves.map((e,t)=>i.entities[`duration_${t}`])}function jt(i){return i.valves.map((e,t)=>i.entities[`max_flow_${t}`])}function Bt(i,e,t=new Date){let s=t.getMonth()+1;return i<=e?s>=i&&s<=e:s>=i||s<=e}function dt(i,e){for(let t of i.log){let s=t.zones.find(n=>n.key===e);if(s)return s}}function Kt(i,e,t,s){return i.callWS({type:"raincast/run_zone",entry_id:e,zone_id:t,minutes:s})}var me={loading:"Loading\u2026",no_entry:"No RainCast controller is set up. Add one under Settings \u2192 Devices & services.","tab.home":"Home","tab.history":"History","tab.settings":"Settings","tab.guide":"Guide","home.control_on":"Valve control on","home.dry_run":"Dry run","home.watering":"Watering {zone}","home.valve_ends":"until about {time}","home.next_start":"Next start {day}, {time}","home.planned_now":"{minutes} min due if it started now","home.no_start":"No zone has a start","home.no_start_hint":"Manual runs still work.","home.automatic_off":"Automatic off","home.automatic_off_title":"Automatic watering is off","home.out_of_season":"Out of season","home.outdoor":"Outdoor","section.watering":"Watering","section.mowing":"Mowing","section.general":"General","home.rain_card":"Rain","home.dry_after":"dry after {hours} h","home.ahead_limit":"limit {hours} h","home.rain_now":"Rain now","home.raining":"raining","home.dry":"dry","home.last_rain":"Last rain","home.next_rain":"Next rain","home.hours_ago":"{hours} h ago","home.in_hours":"in {hours} h","home.no_rain_ahead":"none in the forecast","home.mower":"Mower","home.mower_state":"Mower","home.next_mowing":"Next mowing","home.mow_now":"Mow now","mow.mowing":"Mowing","mow.ready":"Ready","mow.frost":"Frost","mow.watering":"Watering","mow.watered":"Watered today","mow.raining":"Raining","mow.rained":"Rained recently","mow.rain_ahead":"Rain ahead","mow.unknown":"Unknown","mowmode.sunrise":"From sunrise","mowmode.sunset":"From sunset","mowmode.at_time":"At a fixed time","mowmode.off":"Off","home.frost_below":"frost below {limit} \xB0C","home.stop":"Stop","home.run_due":"Water due zones","home.control_needed":"Turn on Valve control in the settings first.","home.weather":"Weather","home.soil":"Soil moisture","home.rain":"Rain forecast","home.not_configured":"not set","home.no_value":"no value","home.weather_hint":"Zones open to the sky are held while the rain forecast is above its limit, the line in the middle of the bar. Below the frost limit no zone is watered.","home.problems":"Problems","status.watering":"Watering","status.due":"Due","status.waiting":"Waiting","status.frost":"Frost","status.wet_soil":"Soil wet","status.rain_forecast":"Rain forecast","status.no_duration":"No valve time","status.unknown":"Unknown","zone.last_watered":"Last watered","zone.next_due":"Next due","zone.minutes":"{minutes} min","zone.interval":"Water every","zone.never":"never","zone.days_ago":"{days} days ago","zone.every_days":"every {days} days","zone.next_start":"Next start","zone.no_start":"off","zone.soil":"Soil","zone.mower_conflict":"Blocks mowing","zone.mower_conflict_hint":"Watering this zone today keeps the mower in; for zones on the mowed lawn.","zone.start":"Start","zone.start_time":"Start time","zone.sunrise_offset":"Hours before sunrise","zone.soil_max":"Soil limit","zone.soil_sensor":"Soil moisture of this zone","zone.soil_sensor_hint":"Optional, sensor or input number in %. A zone without one does not look at the soil.","zone.water":"Water","zone.last_run_liters":"{liters} l last run","zone.total_liters":"{liters} l in total","zone.flow":"{flow} l/min","zone.time":"Time","zone.max_flow":"Flow limit","zone.max_flow_hint":"A valve whose mean flow goes above its limit is closed and reported, for a broken pipe or sprinkler. 0 turns the check off.","zone.settings":"Settings","zone.manual":"Manual","zone.manual_hint":"Each valve runs for the minutes given, 0 leaves it out. The zone counts as watered only at its own full time.","zone.run_start":"Start","zone.cancel":"Cancel","zone.name":"Name","zone.valves":"Valves, in the order they run","zone.roofed":"Under a roof","zone.roofed_hint":"The rain forecast does not hold a greenhouse or a covered bed; its soil sensor and frost still do.","zone.new_hint":"A new zone starts with a 3-day interval and 15 minutes per valve; both are changed here afterwards.","zone.edit_hint":"Saving reloads RainCast. A valve added here starts with the zone's starting time.","zone.remove_confirm":"Remove {name}? Its entities are removed; recorded history stays.","problem.valve_unavailable":"A valve has been unavailable for 30 minutes.","problem.valve_not_opened":"A valve did not open in its latest run.","problem.valve_not_closed":"A valve still reports open after the stop command.","problem.no_flow":"A valve was open without water through the meter.","problem.flow_high":"A valve was closed for flow above its limit.","problem.weather_lost":"A weather input has had no value for an hour.","history.runs":"Runs","history.no_runs":"No run yet.","history.watered":"{watered} of {planned} min","history.not_opened":"did not open: {valves}","history.interrupted":"Stopped before the end.","history.no_flow":"no water","history.flow_high":"closed, flow too high","history.water":"Water per zone, 30 days","history.weather":"Soil and rain, 7 days","history.valves":"Valves, 7 days","reason.scheduled":"Daily start","reason.manual":"Manual","reason.zone":"Single zone","reason.restart":"Cut off by a restart","mode.before_sunrise":"Before sunrise","mode.at_time":"At a fixed time","mode.off":"Off","src.rain_sensor":"Rain forecast","src.water_meter":"Water meter","src.weather":"Weather","src.outdoor_sensor":"Outdoor temperature","src.weather_entity":"Weather forecast","src.mower_group":"Mower","src.mower":"Lawn mower","src.zone_soil":"soil sensor of the zone","src.water":"Water","src.zones":"Zones","src.native":"run time sent with the start","src.open_close":"opened and closed by RainCast","action.edit":"Edit","action.save":"Save","action.remove":"Remove","action.add_zone":"Add zone","action.add_valve":"Add valve","settings.control":"Valve control","settings.control_hint":"Off: the plan is sent as a dry run and no valve is opened.","settings.control_confirm":"RainCast will open the valves at the daily start. Turn off every other schedule watering the same valves first.","settings.confirm":"Turn on","settings.cancel":"Cancel","settings.automatic":"Automatic watering","settings.automatic_hint":"Off: no zone starts by itself and no plan is sent; manual runs still work.","settings.season_start":"Season starts","settings.season_end":"Season ends","settings.season_hint":"Outside the season no zone starts by itself, for example over the winter. Manual runs still work.","settings.watering":"Watering","settings.watering_rules":"When watering waits","settings.mowing":"Mowing","settings.mowing_rules":"When the mower waits","settings.mower_season_hint":"Outside the season the mower does not start by itself; Mow now still works.","settings.automatic_mowing":"Automatic mowing","settings.automatic_mowing_hint":"Off: the mower does not start by itself; Mow now still works.","settings.mower_start":"Start","settings.mower_offset":"Hours after (\u2212before) the event","settings.dry_hours":"Dry hours after rain","settings.rain_ahead_hours":"Rain ahead hours","settings.mower_hint":"The mower also stays in when a zone that blocks mowing was watered today, and below the frost limit of watering.","settings.rain_max":"Rain limit","settings.frost_min":"Frost limit","settings.limits_hint":"Zones open to the sky are held while more rain is forecast than the rain limit. Below the frost limit no zone starts, roofed or not. Each zone has its own start and soil limit, under Zones.","settings.zone_start_hint":"Watering before sunrise loses the least water to evaporation and leaves the lawn dry by day.","settings.sources":"Connected entities","settings.sources_hint":"Edit changes the weather inputs and the water meter; valves and soil sensors are changed with the pencil of their zone.","settings.reload_hint":"Saving reloads RainCast; dates, intervals and valve times are kept.","settings.zones":"Zones","settings.notifications":"Problems and notifications","settings.no_problems":"No problems right now.","settings.notify_service":"Notify service","settings.notify_none":"No notifications","settings.notify_hint":"Receives the day's plan, the end of every run and problems.","settings.entities":"Entities and devices","settings.admin_only":"Only administrators can change settings."},M="en";function Gt(){return(i,e)=>{let t=me[i]??i;for(let[s,n]of Object.entries(e??{}))t=t.replace(`{${s}}`,String(n));return t}}function m(i,e=1){return i==null||!Number.isFinite(i)?"\u2013":i.toLocaleString(M,{minimumFractionDigits:e,maximumFractionDigits:e})}function k(i){return i.toLocaleTimeString(M,{hour:"2-digit",minute:"2-digit",hourCycle:"h23"})}function H(i){let e=new Date;e.setHours(0,0,0,0);let t=new Date(i);t.setHours(0,0,0,0);let s=Math.round((t.getTime()-e.getTime())/864e5);return s===0?"today":s===1?"tomorrow":s===-1?"yesterday":i.toLocaleDateString(M,{weekday:"short",day:"numeric",month:"short"})}var w=g`
   :host {
     --rc-water: var(--state-valve-open-color, #039be5);
     --rc-warn: var(--warning-color, #ffa600);
@@ -93,14 +93,14 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
   ha-icon {
     --mdc-icon-size: 20px;
   }
-`;var fe=["Zone start","Interval","Frost, soil, rain","Plan","Valves one by one","Measured time"],ve=i=>a`<div class="pipeline">${i.map(e=>a`<span class="chip">${e}</span>`)}</div>`,ge=[{icon:"mdi:information-outline",title:"How RainCast works",body:a`
+`;var fe=["Zone start","Interval","Frost, soil, rain","Plan","Valves one by one","Measured time"],ge=i=>a`<div class="pipeline">${i.map(e=>a`<span class="chip">${e}</span>`)}</div>`,ve=[{icon:"mdi:information-outline",title:"How RainCast works",body:a`
       <p>
         Each zone starts once a day at its own time, a number of hours before sunrise or at a fixed time. RainCast then
         decides whether the zone needs water and waters it one valve after another. Only one valve runs at a time, so the
         water pressure stays the same for every zone: zones starting together run as one, and a start during a run waits
         for it to end.
       </p>
-      ${ve(fe)}
+      ${ge(fe)}
       <ol>
         <li><b>Interval.</b> A zone is due when its interval has passed since it was last watered, or when it was never watered.</li>
         <li><b>Frost.</b> Below the frost limit no zone is watered, roofed or not.</li>
@@ -254,16 +254,16 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
         <tr><td>Weather data lost</td><td>a configured weather input has had no value for an hour</td></tr>
       </table>
       <p>The notify service also receives the day's plan and the end of every run.</p>
-    `}],ct=class extends m{render(){return a`
+    `}],ct=class extends f{render(){return a`
       <div class="guide">
-        ${ge.map((e,t)=>a`
+        ${ve.map((e,t)=>a`
             <details class="card" ?open=${t===0}>
               <summary><ha-icon icon=${e.icon}></ha-icon><span>${e.title}</span></summary>
               <div class="body">${e.body}</div>
             </details>
           `)}
       </div>
-    `}static{this.styles=[y,f`
+    `}static{this.styles=[w,g`
       .guide {
         max-width: 860px;
         margin: 0 auto;
@@ -346,7 +346,7 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
           padding-left: 16px;
         }
       }
-    `]}};customElements.get("raincast-guide")??customElements.define("raincast-guide",ct);var qt;async function Jt(i){if(window.loadCardHelpers)return qt??=window.loadCardHelpers(),(await qt).createCardElement(i)}function b(i,e){if(!e)return;let t=Number.parseFloat(i.states[e]?.state??"");return Number.isFinite(t)?t:void 0}function w(i,e){return!!e&&i.states[e]?.state==="on"}function z(i,e,t){i.dispatchEvent(new CustomEvent(e,{detail:t,bubbles:!0,composed:!0}))}var Yt=168,ye=30,ht=class extends m{constructor(){super(...arguments);this.cards=[]}static{this.properties={hass:{attribute:!1},entry:{attribute:!1},localize:{attribute:!1}}}updated(){this.cardsFor!==this.entry&&(this.cardsFor=this.entry,this.buildCards());for(let t of this.cards)t.hass=this.hass}async buildCards(){let t=this.localize,s=[...this.entry.zones.map(l=>l.soil_sensor),this.entry.sources.rain_sensor].filter(l=>!!l),n=this.entry.zones.flatMap(l=>l.valves),r=this.entry.zones.map(l=>l.entities.water_used?{entity:l.entities.water_used,name:l.name}:null).filter(l=>l!==null),o=[r.length?{type:"statistics-graph",title:t("history.water"),entities:r,stat_types:["change"],chart_type:"bar",period:"day",days_to_show:ye}:null,s.length?{type:"history-graph",title:t("history.weather"),hours_to_show:Yt,entities:s}:null,n.length?{type:"history-graph",title:t("history.valves"),hours_to_show:Yt,entities:n}:null].filter(l=>l!==null),h=await Promise.all(o.map(l=>Jt(l)));this.cards=h.filter(l=>!!l);let d=this.renderRoot.querySelector(".graphs");if(d){d.replaceChildren(...this.cards);for(let l of this.cards)l.hass=this.hass}}render(){let t=this.localize;return a`
+    `]}};customElements.get("raincast-guide")??customElements.define("raincast-guide",ct);var qt;async function Jt(i){if(window.loadCardHelpers)return qt??=window.loadCardHelpers(),(await qt).createCardElement(i)}function y(i,e){if(!e)return;let t=Number.parseFloat(i.states[e]?.state??"");return Number.isFinite(t)?t:void 0}function b(i,e){return!!e&&i.states[e]?.state==="on"}function z(i,e,t){i.dispatchEvent(new CustomEvent(e,{detail:t,bubbles:!0,composed:!0}))}var Yt=168,ye=30,ht=class extends f{constructor(){super(...arguments);this.cards=[]}static{this.properties={hass:{attribute:!1},entry:{attribute:!1},localize:{attribute:!1}}}updated(){this.cardsFor!==this.entry&&(this.cardsFor=this.entry,this.buildCards());for(let t of this.cards)t.hass=this.hass}async buildCards(){let t=this.localize,s=[...this.entry.zones.map(l=>l.soil_sensor),this.entry.sources.rain_sensor].filter(l=>!!l),n=this.entry.zones.flatMap(l=>l.valves),r=this.entry.zones.map(l=>l.entities.water_used?{entity:l.entities.water_used,name:l.name}:null).filter(l=>l!==null),o=[r.length?{type:"statistics-graph",title:t("history.water"),entities:r,stat_types:["change"],chart_type:"bar",period:"day",days_to_show:ye}:null,s.length?{type:"history-graph",title:t("history.weather"),hours_to_show:Yt,entities:s}:null,n.length?{type:"history-graph",title:t("history.valves"),hours_to_show:Yt,entities:n}:null].filter(l=>l!==null),c=await Promise.all(o.map(l=>Jt(l)));this.cards=c.filter(l=>!!l);let d=this.renderRoot.querySelector(".graphs");if(d){d.replaceChildren(...this.cards);for(let l of this.cards)l.hass=this.hass}}render(){let t=this.localize;return a`
       <div class="layout">
         <section class="card">
           <h2><ha-icon icon="mdi:history"></ha-icon>${t("history.runs")}</h2>
@@ -354,38 +354,38 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
         </section>
         <div class="graphs"></div>
       </div>
-    `}renderRun(t){let s=this.localize,n=t.started?new Date(t.started):void 0,r=t.ended?new Date(t.ended):void 0,o=!t.interrupted&&t.zones.every(d=>d.watered),h=n?`${H(n)} ${k(n)}${r?`\u2013${k(r)}`:""}`:"\u2013";return a`
+    `}renderRun(t){let s=this.localize,n=t.started?new Date(t.started):void 0,r=t.ended?new Date(t.ended):void 0,o=!t.interrupted&&t.zones.every(d=>d.watered),c=n?`${H(n)} ${k(n)}${r?`\u2013${k(r)}`:""}`:"\u2013";return a`
       <div class="run">
         <div class="run-head">
           <ha-icon
             class=${o?"ok":"warn"}
             icon=${o?"mdi:check-circle":"mdi:alert-circle-outline"}
           ></ha-icon>
-          <span class="grow">${h}</span>
+          <span class="grow">${c}</span>
           <span class="chip">${s(`reason.${t.reason}`)}</span>
         </div>
         ${t.zones.map(d=>a`
             <div class="zone-row">
               <span>${d.name}</span>
               <span class=${d.watered?"":"warn-text"}>
-                ${s("history.watered",{watered:v(d.watered_min,0),planned:v(d.planned_min,0)})}
-                ${d.liters!==null&&d.liters!==void 0?a` · ${v(d.liters,0)} l`:c}
+                ${s("history.watered",{watered:m(d.watered_min,0),planned:m(d.planned_min,0)})}
+                ${d.liters!==null&&d.liters!==void 0?a` · ${m(d.liters,0)} l`:h}
               </span>
             </div>
             ${(d.valves??[]).map(l=>this.renderValve(l))}
-            ${d.not_opened.length?a`<div class="muted small">${s("history.not_opened",{valves:d.not_opened.map(l=>this.hass.states[l]?.attributes.friendly_name??l).join(", ")})}</div>`:c}
+            ${d.not_opened.length?a`<div class="muted small">${s("history.not_opened",{valves:d.not_opened.map(l=>this.hass.states[l]?.attributes.friendly_name??l).join(", ")})}</div>`:h}
           `)}
-        ${t.interrupted?a`<div class="muted small">${s("history.interrupted")}</div>`:c}
+        ${t.interrupted?a`<div class="muted small">${s("history.interrupted")}</div>`:h}
       </div>
-    `}renderValve(t){let s=this.localize,n=[s("zone.minutes",{minutes:v(t.minutes,1)})];return t.liters!==null&&n.push(`${v(t.liters,0)} l`),t.flow!==null&&n.push(s("zone.flow",{flow:v(t.flow,1)})),a`
+    `}renderValve(t){let s=this.localize,n=[s("zone.minutes",{minutes:m(t.minutes,1)})];return t.liters!==null&&n.push(`${m(t.liters,0)} l`),t.flow!==null&&n.push(s("zone.flow",{flow:m(t.flow,1)})),a`
       <div class="valve-row muted small">
         <span>${this.hass.states[t.entity_id]?.attributes.friendly_name??t.entity_id}</span>
         <span>
-          ${t.no_flow?a`<b class="warn-text">${s("history.no_flow")}</b> · `:c}
-          ${t.flow_high?a`<b class="warn-text">${s("history.flow_high")}</b> · `:c} ${n.join(" \xB7 ")}
+          ${t.no_flow?a`<b class="warn-text">${s("history.no_flow")}</b> · `:h}
+          ${t.flow_high?a`<b class="warn-text">${s("history.flow_high")}</b> · `:h} ${n.join(" \xB7 ")}
         </span>
       </div>
-    `}static{this.styles=[y,f`
+    `}static{this.styles=[w,g`
       .layout {
         display: grid;
         grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
@@ -448,7 +448,7 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
         gap: 8px;
         padding-left: 40px;
       }
-    `]}};customElements.get("raincast-history")??customElements.define("raincast-history",ht);function _(i,e,t){let s=e?i.states[e]:void 0;if(!s)return a``;let n=Number.parseFloat(s.state),r=Number(s.attributes.step??1),o=Number(s.attributes.min??-1/0),h=Number(s.attributes.max??1/0),d=r<.01?3:r<.1?2:r<1?1:0,l=s.attributes.unit_of_measurement??"",p=u=>{if(!Number.isFinite(u))return;let g=Math.round(Math.max(Math.min(u,h),o)/r)*r;i.callService("number","set_value",{entity_id:e,value:Number(g.toFixed(4))})};return a`
+    `]}};customElements.get("raincast-history")??customElements.define("raincast-history",ht);function $(i,e,t){let s=e?i.states[e]:void 0;if(!s)return a``;let n=Number.parseFloat(s.state),r=Number(s.attributes.step??1),o=Number(s.attributes.min??-1/0),c=Number(s.attributes.max??1/0),d=r<.01?3:r<.1?2:r<1?1:0,l=s.attributes.unit_of_measurement??"",p=u=>{if(!Number.isFinite(u))return;let v=Math.round(Math.max(Math.min(u,c),o)/r)*r;i.callService("number","set_value",{entity_id:e,value:Number(v.toFixed(4))})};return a`
     <div class="number">
       <span class="label">${t}</span>
       <span class="stepper">
@@ -458,14 +458,14 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
           .value=${Number.isFinite(n)?n.toFixed(d):""}
           step=${r}
           min=${o}
-          max=${h}
+          max=${c}
           @change=${u=>p(Number.parseFloat(u.target.value))}
         />
-        <button class="round mini" ?disabled=${n>=h} @click=${()=>p(n+r)}>+</button>
+        <button class="round mini" ?disabled=${n>=c} @click=${()=>p(n+r)}>+</button>
         <span class="unit">${l}</span>
       </span>
     </div>
-  `}var L=f`
+  `}var L=g`
   .number,
   .toggle-row {
     display: flex;
@@ -556,14 +556,21 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
     font-size: 0.85rem;
     color: var(--rc-muted);
   }
-`;var be={watering:"water",due:"ok",waiting:"",frost:"warn",wet_soil:"warn",rain_forecast:"warn",no_duration:"warn"},we=["open","opening","on"];function Xt(i){return String(i?.message??i)}var ut=class extends m{static{this.properties={hass:{attribute:!1},entry:{attribute:!1},localize:{attribute:!1},error:{state:!0},manual:{state:!0}}}openManual(e){let t=V(e),s=Object.fromEntries(e.valves.map((n,r)=>[n,b(this.hass,t[r])??0]));this.manual={zoneId:e.id,minutes:s},this.error=void 0}async startManual(e){if(this.manual){this.error=void 0;try{await Kt(this.hass,this.entry.entry_id,e.id,this.manual.minutes),this.manual=void 0}catch(t){this.error=Xt(t)}}}async press(e){this.error=void 0;try{await Vt(this.hass,e)}catch(t){this.error=Xt(t)}}name(e){return String(this.hass.states[e]?.attributes.friendly_name??e)}render(){return a`
+`;var we={watering:"water",due:"ok",waiting:"",frost:"warn",wet_soil:"warn",rain_forecast:"warn",no_duration:"warn"},be=["open","opening","on"];function Xt(i){return String(i?.message??i)}var ut=class extends f{static{this.properties={hass:{attribute:!1},entry:{attribute:!1},localize:{attribute:!1},error:{state:!0},manual:{state:!0}}}openManual(e){let t=V(e),s=Object.fromEntries(e.valves.map((n,r)=>[n,y(this.hass,t[r])??0]));this.manual={zoneId:e.id,minutes:s},this.error=void 0}async startManual(e){if(this.manual){this.error=void 0;try{await Kt(this.hass,this.entry.entry_id,e.id,this.manual.minutes),this.manual=void 0}catch(t){this.error=Xt(t)}}}async press(e){this.error=void 0;try{await Vt(this.hass,e)}catch(t){this.error=Xt(t)}}name(e){return String(this.hass.states[e]?.attributes.friendly_name??e)}render(){let e=this.localize,t=!!this.entry.sources.mower&&!!this.entry.entities.mowing;return a`
+      ${this.renderProblems()}
+      <h1 class="section"><ha-icon icon="mdi:sprinkler-variant"></ha-icon>${e("section.watering")}</h1>
       <div class="layout">
-        <div class="column">
-          ${this.renderStatus()} ${this.renderMower()} ${this.renderWeather()} ${this.renderProblems()}
-        </div>
-        <div class="zones">${this.entry.zones.map(e=>this.renderZone(e))}</div>
+        <div class="column">${this.renderStatus()} ${this.renderWeather()}</div>
+        <div class="zones">${this.entry.zones.map(s=>this.renderZone(s))}</div>
       </div>
-    `}renderStatus(){let e=this.localize,t=this.entry.entities,s=w(this.hass,t.control),r=this.hass.states[t.running]?.state==="on";return a`
+      ${t?a`
+            <h1 class="section"><ha-icon icon="mdi:robot-mower-outline"></ha-icon>${e("section.mowing")}</h1>
+            <div class="layout">
+              <div class="column">${this.renderMower()}</div>
+              <div class="column">${this.entry.sources.weather?this.renderRainCard():h}</div>
+            </div>
+          `:h}
+    `}renderStatus(){let e=this.localize,t=this.entry.entities,s=b(this.hass,t.control),r=this.hass.states[t.running]?.state==="on";return a`
       <section class="card status ${r?"active":""}">
         <div class="headline">
           <ha-icon icon=${r?"mdi:sprinkler-variant":"mdi:calendar-clock"}></ha-icon>
@@ -571,7 +578,7 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
           ${this.renderModeChip(s)}
         </div>
         ${this.renderPlan()}
-        ${this.error?a`<div class="error">${this.error}</div>`:c}
+        ${this.error?a`<div class="error">${this.error}</div>`:h}
         <div class="actions">
           ${r?a`<button class="text danger" @click=${()=>this.press(t.stop)}>
                 <ha-icon icon="mdi:water-off"></ha-icon> ${e("home.stop")}
@@ -585,10 +592,10 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
               </button>`}
         </div>
       </section>
-    `}renderModeChip(e){let t=this.localize,s=this.entry.entities;if(!w(this.hass,s.automatic))return a`<span class="chip warn">${t("home.automatic_off")}</span>`;let n=b(this.hass,s.season_start),r=b(this.hass,s.season_end);return n!==void 0&&r!==void 0&&!Bt(n,r)?a`<span class="chip warn">${t("home.out_of_season")}</span>`:a`<span class="chip ${e?"ok":"warn"}">${t(e?"home.control_on":"home.dry_run")}</span>`}renderRunning(){let e=this.localize,t=this.hass.states[this.entry.entities.running]?.attributes??{},s=t.valve?this.name(t.valve):"",n=t.valve_ends?k(new Date(t.valve_ends)):"";return a`
+    `}renderModeChip(e){let t=this.localize,s=this.entry.entities;if(!b(this.hass,s.automatic))return a`<span class="chip warn">${t("home.automatic_off")}</span>`;let n=y(this.hass,s.season_start),r=y(this.hass,s.season_end);return n!==void 0&&r!==void 0&&!Bt(n,r)?a`<span class="chip warn">${t("home.out_of_season")}</span>`:a`<span class="chip ${e?"ok":"warn"}">${t(e?"home.control_on":"home.dry_run")}</span>`}renderRunning(){let e=this.localize,t=this.hass.states[this.entry.entities.running]?.attributes??{},s=t.valve?this.name(t.valve):"",n=t.valve_ends?k(new Date(t.valve_ends)):"";return a`
       <div class="big">${e("home.watering",{zone:t.zone??""})}</div>
       <div class="muted small">${s}${n?` \xB7 ${e("home.valve_ends",{time:n})}`:""}</div>
-    `}renderNext(){let e=this.localize,t=this.hass.states[this.entry.entities.next_start]?.state,s=t&&!["unknown","unavailable"].includes(t)?new Date(t):void 0;if(!s){let n=!w(this.hass,this.entry.entities.automatic);return a`<div class="big">${e(n?"home.automatic_off_title":"home.no_start")}</div>
+    `}renderNext(){let e=this.localize,t=this.hass.states[this.entry.entities.next_start]?.state,s=t&&!["unknown","unavailable"].includes(t)?new Date(t):void 0;if(!s){let n=!b(this.hass,this.entry.entities.automatic);return a`<div class="big">${e(n?"home.automatic_off_title":"home.no_start")}</div>
         <div class="muted small">${e("home.no_start_hint")}</div>`}return a`
       <div class="big">${e("home.next_start",{day:H(s),time:k(s)})}</div>
       <div class="muted small">${e("home.planned_now",{minutes:this.hass.states[this.entry.entities.planned]?.state??"0"})}</div>
@@ -603,24 +610,32 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
       <section class="card">
         <h2><ha-icon icon="mdi:weather-partly-rainy"></ha-icon>${e("home.weather")}</h2>
         ${this.renderGauge(e("home.rain"),t.rain_sensor,s.rain_max,"mm")}
-        ${t.outdoor_sensor?this.renderGauge(e("home.outdoor"),t.outdoor_sensor,s.frost_min,"\xB0C",!0):c}
-        ${t.weather?this.renderRain():c}
+        ${t.outdoor_sensor?this.renderGauge(e("home.outdoor"),t.outdoor_sensor,s.frost_min,"\xB0C",!0):h}
         <p class="muted small">${e("home.weather_hint")}</p>
       </section>
-    `}renderRain(){let e=this.localize,t=this.entry.entities,s=w(this.hass,t.raining),n=b(this.hass,t.hours_since_rain),r=b(this.hass,t.hours_to_rain);return a`
-      <div class="gauge">
-        <span>${e("home.rain_now")}</span>
-        <span class=${s?"warn-text":""}>${e(s?"home.raining":"home.dry")}</span>
-      </div>
-      <div class="gauge">
-        <span>${e("home.last_rain")}</span>
-        <span>${n===void 0?"\u2013":e("home.hours_ago",{hours:v(n,1)})}</span>
-      </div>
-      <div class="gauge">
-        <span>${e("home.next_rain")}</span>
-        <span>${r===void 0?e("home.no_rain_ahead"):e("home.in_hours",{hours:v(r,1)})}</span>
-      </div>
-    `}renderMower(){let e=this.localize,t=this.entry.entities,s=this.entry.sources.mower;if(!s||!t.mowing)return c;let n=this.hass.states[t.mowing]?.state??"unknown",r=this.hass.states[t.next_mowing]?.state,o=r&&!["unknown","unavailable"].includes(r)?new Date(r):void 0,h=w(this.hass,t.automatic_mowing),d=n==="mowing"?"water":n==="ready"?"ok":"warn";return a`
+    `}renderRainCard(){let e=this.localize,t=this.entry.entities,s=b(this.hass,t.raining),n=y(this.hass,t.hours_since_rain),r=y(this.hass,t.hours_to_rain),o=y(this.hass,t.dry_hours),c=y(this.hass,t.rain_ahead_hours),d=n!==void 0&&o!==void 0&&n<o,l=r!==void 0&&c!==void 0&&r<c;return a`
+      <section class="card">
+        <h2><ha-icon icon="mdi:weather-pouring"></ha-icon>${e("home.rain_card")}</h2>
+        <div class="gauge">
+          <span>${e("home.rain_now")}</span>
+          <span class=${s?"warn-text":""}>${e(s?"home.raining":"home.dry")}</span>
+        </div>
+        <div class="gauge">
+          <span>${e("home.last_rain")}</span>
+          <span class=${d?"warn-text":""}>
+            ${n===void 0?"\u2013":e("home.hours_ago",{hours:m(n,1)})}
+            <span class="muted small">/ ${e("home.dry_after",{hours:m(o,0)})}</span>
+          </span>
+        </div>
+        <div class="gauge">
+          <span>${e("home.next_rain")}</span>
+          <span class=${l?"warn-text":""}>
+            ${r===void 0?e("home.no_rain_ahead"):e("home.in_hours",{hours:m(r,1)})}
+            <span class="muted small">/ ${e("home.ahead_limit",{hours:m(c,1)})}</span>
+          </span>
+        </div>
+      </section>
+    `}renderMower(){let e=this.localize,t=this.entry.entities,s=this.entry.sources.mower;if(!s||!t.mowing)return h;let n=this.hass.states[t.mowing]?.state??"unknown",r=this.hass.states[t.next_mowing]?.state,o=r&&!["unknown","unavailable"].includes(r)?new Date(r):void 0,c=b(this.hass,t.automatic_mowing),d=n==="mowing"?"water":n==="ready"?"ok":"warn";return a`
       <section class="card ${n==="mowing"?"active":""}">
         <h2>
           <ha-icon icon="mdi:robot-mower-outline"></ha-icon>
@@ -631,7 +646,7 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
           <dt>${e("home.mower_state")}</dt>
           <dd>${this.hass.states[s]?.state??"\u2013"}</dd>
           <dt>${e("home.next_mowing")}</dt>
-          <dd>${h?o?`${H(o)}, ${k(o)}`:"\u2013":e("home.automatic_off")}</dd>
+          <dd>${c?o?`${H(o)}, ${k(o)}`:"\u2013":e("home.automatic_off")}</dd>
         </dl>
         <div class="actions">
           <button class="text primary" ?disabled=${n==="mowing"} @click=${()=>this.press(t.mow_now)}>
@@ -639,20 +654,20 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
           </button>
         </div>
       </section>
-    `}renderGauge(e,t,s,n,r=!1){let o=this.localize;if(!t)return a`<div class="gauge"><span>${e}</span><span class="muted">${o("home.not_configured")}</span></div>`;let h=b(this.hass,t),d=b(this.hass,s),p=h!==void 0&&d!==void 0&&(r?h<d:h>d),u=h!==void 0&&d?Math.min(h/(2*d),1):0;return r?a`
+    `}renderGauge(e,t,s,n,r=!1){let o=this.localize;if(!t)return a`<div class="gauge"><span>${e}</span><span class="muted">${o("home.not_configured")}</span></div>`;let c=y(this.hass,t),d=y(this.hass,s),p=c!==void 0&&d!==void 0&&(r?c<d:c>d),u=c!==void 0&&d?Math.min(c/(2*d),1):0;return r?a`
         <div class="gauge">
           <span>${e}</span>
           <span class=${p?"warn-text":""}>
-            ${h===void 0?o("home.no_value"):`${v(h,1)} ${n}`}
-            <span class="muted small">/ ${o("home.frost_below",{limit:v(d,1)})}</span>
+            ${c===void 0?o("home.no_value"):`${m(c,1)} ${n}`}
+            <span class="muted small">/ ${o("home.frost_below",{limit:m(d,1)})}</span>
           </span>
         </div>
       `:a`
       <div class="gauge">
         <span>${e}</span>
         <span class=${p?"warn-text":""}>
-          ${h===void 0?o("home.no_value"):`${v(h,1)} ${n}`}
-          <span class="muted small">/ ${v(d,1)} ${n}</span>
+          ${c===void 0?o("home.no_value"):`${m(c,1)} ${n}`}
+          <span class="muted small">/ ${m(d,1)} ${n}</span>
         </span>
       </div>
       <div class="bar"><span class=${p?"over":""} style="width: ${u*100}%"></span><i></i></div>
@@ -663,12 +678,12 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
           ${e.map(t=>a`<li>${this.localize(`problem.${t}`)}</li>`)}
         </ul>
       </section>
-    `:c}renderZone(e){let t=this.localize,s=this.hass.states[e.entities.status],n=s?.state??"unknown",r=this.hass.states[e.entities.last_watered]?.state,o=this.hass.states[e.entities.next_due]?.state,h=b(this.hass,e.entities.interval),d=V(e),l=this.manual?.zoneId===e.id?this.manual:void 0,p=dt(this.entry,e.id);return a`
+    `:h}renderZone(e){let t=this.localize,s=this.hass.states[e.entities.status],n=s?.state??"unknown",r=this.hass.states[e.entities.last_watered]?.state,o=this.hass.states[e.entities.next_due]?.state,c=y(this.hass,e.entities.interval),d=V(e),l=this.manual?.zoneId===e.id?this.manual:void 0,p=dt(this.entry,e.id);return a`
       <section class="card zone ${n==="watering"?"active":""}">
         <h2>
           <ha-icon icon=${e.roofed?"mdi:greenhouse":"mdi:sprinkler"}></ha-icon>
           <span class="grow">${e.name}</span>
-          <span class="chip ${be[n]??""}">${t(`status.${n}`)}</span>
+          <span class="chip ${we[n]??""}">${t(`status.${n}`)}</span>
         </h2>
         <dl>
           <dt>${t("zone.last_watered")}</dt>
@@ -678,13 +693,13 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
           <dt>${t("zone.next_start")}</dt>
           <dd>${this.startText(e)}</dd>
           <dt>${t("zone.interval")}</dt>
-          <dd>${t("zone.every_days",{days:h??"\u2013"})}</dd>
+          <dd>${t("zone.every_days",{days:c??"\u2013"})}</dd>
           ${this.renderSoil(e)} ${this.renderWater(e)}
         </dl>
         <div class="valves">
-          ${e.valves.map((u,g)=>{let $=we.includes(this.hass.states[u]?.state??""),A=p?.valves?.find(q=>q.entity_id===u)?.flow;return a`
+          ${e.valves.map((u,v)=>{let _=be.includes(this.hass.states[u]?.state??""),A=p?.valves?.find(q=>q.entity_id===u)?.flow;return a`
               <div class="valve">
-                <span class="dot ${$?"open":""}" title=${this.hass.states[u]?.state??""}></span>
+                <span class="dot ${_?"open":""}" title=${this.hass.states[u]?.state??""}></span>
                 <span class="grow">${this.name(u)}</span>
                 ${l?a`<input
                         class="text minutes"
@@ -693,27 +708,27 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
                         max="240"
                         step="1"
                         .value=${String(l.minutes[u]??0)}
-                        @change=${q=>{let bt=Number.parseFloat(q.target.value);this.manual={...l,minutes:{...l.minutes,[u]:Number.isFinite(bt)?Math.max(0,bt):0}}}}
+                        @change=${q=>{let wt=Number.parseFloat(q.target.value);this.manual={...l,minutes:{...l.minutes,[u]:Number.isFinite(wt)?Math.max(0,wt):0}}}}
                       /><span class="unit">min</span>`:a`<span class="muted">
-                      ${A!=null?a`${t("zone.flow",{flow:v(A,1)})} · `:c}
-                      ${t("zone.minutes",{minutes:v(b(this.hass,d[g]),0)})}
+                      ${A!=null?a`${t("zone.flow",{flow:m(A,1)})} · `:h}
+                      ${t("zone.minutes",{minutes:m(y(this.hass,d[v]),0)})}
                     </span>`}
               </div>
             `})}
         </div>
         ${l?this.renderManualActions(e):this.renderZoneActions(e)}
       </section>
-    `}startText(e){let t=this.hass.states[e.entities.next_start]?.state;if(!t||["unknown","unavailable"].includes(t))return this.localize("zone.no_start");let s=new Date(t);return`${H(s)}, ${k(s)}`}renderSoil(e){let t=this.localize,s=e.soil_sensor;if(!s)return c;let n=b(this.hass,s),r=b(this.hass,e.entities.soil_max),o=n!==void 0&&r!==void 0&&n>r;return a`
+    `}startText(e){let t=this.hass.states[e.entities.next_start]?.state;if(!t||["unknown","unavailable"].includes(t))return this.localize("zone.no_start");let s=new Date(t);return`${H(s)}, ${k(s)}`}renderSoil(e){let t=this.localize,s=e.soil_sensor;if(!s)return h;let n=y(this.hass,s),r=y(this.hass,e.entities.soil_max),o=n!==void 0&&r!==void 0&&n>r;return a`
       <dt>${t("zone.soil")}</dt>
       <dd>
-        <span class=${o?"warn-text":""}>${n===void 0?t("home.no_value"):`${v(n,1)} %`}</span>
-        <span class="muted">/ ${v(r,0)} %</span>
+        <span class=${o?"warn-text":""}>${n===void 0?t("home.no_value"):`${m(n,1)} %`}</span>
+        <span class="muted">/ ${m(r,0)} %</span>
       </dd>
-    `}renderWater(e){let t=this.localize;if(!e.entities.water_used)return c;let s=b(this.hass,e.entities.water_used),n=dt(this.entry,e.id)?.liters;return a`
+    `}renderWater(e){let t=this.localize;if(!e.entities.water_used)return h;let s=y(this.hass,e.entities.water_used),n=dt(this.entry,e.id)?.liters;return a`
       <dt>${t("zone.water")}</dt>
       <dd>
-        ${n!=null?t("zone.last_run_liters",{liters:v(n,0)}):"\u2013"}
-        <span class="muted">· ${t("zone.total_liters",{liters:v(s,0)})}</span>
+        ${n!=null?t("zone.last_run_liters",{liters:m(n,0)}):"\u2013"}
+        <span class="muted">· ${t("zone.total_liters",{liters:m(s,0)})}</span>
       </dd>
     `}renderZoneActions(e){let t=this.localize;return a`
       <div class="actions">
@@ -724,7 +739,7 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
           <ha-icon icon="mdi:hand-water"></ha-icon> ${t("zone.manual")}
         </button>
       </div>
-    `}renderManualActions(e){let t=this.localize,s=w(this.hass,this.entry.entities.control),n=w(this.hass,this.entry.entities.running),r=Object.values(this.manual?.minutes??{}).some(o=>o>0);return a`
+    `}renderManualActions(e){let t=this.localize,s=b(this.hass,this.entry.entities.control),n=b(this.hass,this.entry.entities.running),r=Object.values(this.manual?.minutes??{}).some(o=>o>0);return a`
       <p class="muted small">${t(s?"zone.manual_hint":"home.control_needed")}</p>
       <div class="actions">
         <button class="text" @click=${()=>this.manual=void 0}>${t("zone.cancel")}</button>
@@ -736,12 +751,30 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
           <ha-icon icon="mdi:play"></ha-icon> ${t("zone.run_start")}
         </button>
       </div>
-    `}dateText(e,t){let s=this.localize;if(!e||["unknown","unavailable"].includes(e))return s("zone.never");let n=new Date(`${e}T00:00:00`),r=H(n);return t==null||t<2?r:`${r} \xB7 ${s("zone.days_ago",{days:t})}`}static{this.styles=[y,L,f`
+    `}dateText(e,t){let s=this.localize;if(!e||["unknown","unavailable"].includes(e))return s("zone.never");let n=new Date(`${e}T00:00:00`),r=H(n);return t==null||t<2?r:`${r} \xB7 ${s("zone.days_ago",{days:t})}`}static{this.styles=[w,L,g`
       .layout {
         display: grid;
         grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
         gap: var(--rc-gap);
         align-items: start;
+      }
+      h1.section {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 28px 0 12px;
+        font-size: 1.1rem;
+        font-weight: 500;
+      }
+      h1.section:first-of-type {
+        margin-top: 4px;
+      }
+      h1.section ha-icon {
+        --mdc-icon-size: 22px;
+        color: var(--primary-color);
+      }
+      .problems {
+        margin-bottom: var(--rc-gap);
       }
       .column {
         display: flex;
@@ -886,7 +919,7 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
         background: var(--rc-water);
         box-shadow: 0 0 0 3px color-mix(in srgb, var(--rc-water) 30%, transparent);
       }
-    `]}};customElements.get("raincast-home")??customElements.define("raincast-home",ut);var pt=class extends m{constructor(){super(...arguments);this.domains=[];this.optional=!1}static{this.properties={hass:{attribute:!1},domains:{attribute:!1},deviceClass:{attribute:!1},value:{attribute:!1},optional:{type:Boolean}}}options(){return Object.values(this.hass.states).filter(s=>{let n=this.domains.includes(s.entity_id.split(".")[0]),r=!this.deviceClass||s.attributes.device_class===this.deviceClass;return n&&(r||s.entity_id===this.value)}).map(s=>({id:s.entity_id,name:String(s.attributes.friendly_name??s.entity_id)})).sort((s,n)=>s.name.localeCompare(n.name))}render(){let t=this.options(),s=!this.value||t.some(n=>n.id===this.value);return a`
+    `]}};customElements.get("raincast-home")??customElements.define("raincast-home",ut);var pt=class extends f{constructor(){super(...arguments);this.domains=[];this.optional=!1}static{this.properties={hass:{attribute:!1},domains:{attribute:!1},deviceClass:{attribute:!1},value:{attribute:!1},optional:{type:Boolean}}}options(){return Object.values(this.hass.states).filter(s=>{let n=this.domains.includes(s.entity_id.split(".")[0]),r=!this.deviceClass||s.attributes.device_class===this.deviceClass;return n&&(r||s.entity_id===this.value)}).map(s=>({id:s.entity_id,name:String(s.attributes.friendly_name??s.entity_id)})).sort((s,n)=>s.name.localeCompare(n.name))}render(){let t=this.options(),s=!this.value||t.some(n=>n.id===this.value);return a`
       <select
         @change=${n=>{let r=n.target.value;z(this,"value-changed",r||null)}}
       >
@@ -894,7 +927,7 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
         ${s?"":a`<option value=${this.value} selected>${this.value}</option>`}
         ${t.map(n=>a`<option value=${n.id} ?selected=${n.id===this.value}>${n.name} · ${n.id}</option>`)}
       </select>
-    `}static{this.styles=f`
+    `}static{this.styles=g`
     select {
       width: 100%;
       box-sizing: border-box;
@@ -905,7 +938,7 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
       color: var(--primary-text-color);
       font: inherit;
     }
-  `}};customElements.get("raincast-entity-picker")??customElements.define("raincast-entity-picker",pt);var Qt=[{title:"src.weather",fields:[{key:"rain_sensor",label:"src.rain_sensor",domains:["sensor","input_number"]},{key:"outdoor_sensor",label:"src.outdoor_sensor",domains:["sensor"],deviceClass:"temperature"},{key:"weather",label:"src.weather_entity",domains:["weather"]}]},{title:"src.water",fields:[{key:"water_meter",label:"src.water_meter",domains:["sensor"],deviceClass:"water"}]},{title:"src.mower_group",fields:[{key:"mower",label:"src.mower",domains:["lawn_mower"]}]}],_e=Qt.flatMap(i=>i.fields),$e=["valve","switch","input_boolean"],xe=["sensor","input_number"],ze=["before_sunrise","at_time","off"],Ae=3,Ee=15;function te(i){return String(i?.message??i)}function mt(i,e){return e?String(i.states[e]?.attributes.friendly_name??e):"\u2013"}function ke(i,e){let t=i.states[e];if(!t)return"missing";let s=t.attributes.unit_of_measurement,n=Number(t.state),r=t.state!==""&&Number.isFinite(n)?n.toLocaleString(M,{maximumFractionDigits:3}):t.state;return s?`${r} ${s}`:r}var ft=class extends m{constructor(){super(...arguments);this.saving=!1}static{this.properties={hass:{attribute:!1},entry:{attribute:!1},localize:{attribute:!1},draft:{state:!0},error:{state:!0},saving:{state:!0}}}async save(){if(this.draft){this.saving=!0;try{await Ut(this.hass,this.entry.entry_id,this.draft),this.draft=void 0,z(this,"raincast-entries-changed")}catch(t){this.error=te(t)}finally{this.saving=!1}}}render(){let t=this.localize;return a`
+  `}};customElements.get("raincast-entity-picker")??customElements.define("raincast-entity-picker",pt);var Qt=[{title:"src.weather",fields:[{key:"rain_sensor",label:"src.rain_sensor",domains:["sensor","input_number"]},{key:"outdoor_sensor",label:"src.outdoor_sensor",domains:["sensor"],deviceClass:"temperature"},{key:"weather",label:"src.weather_entity",domains:["weather"]}]},{title:"src.water",fields:[{key:"water_meter",label:"src.water_meter",domains:["sensor"],deviceClass:"water"}]},{title:"src.mower_group",fields:[{key:"mower",label:"src.mower",domains:["lawn_mower"]}]}],$e=Qt.flatMap(i=>i.fields),_e=["valve","switch","input_boolean"],xe=["sensor","input_number"],ze=["before_sunrise","at_time","off"],Ae=3,Ee=15;function te(i){return String(i?.message??i)}function mt(i,e){return e?String(i.states[e]?.attributes.friendly_name??e):"\u2013"}function ke(i,e){let t=i.states[e];if(!t)return"missing";let s=t.attributes.unit_of_measurement,n=Number(t.state),r=t.state!==""&&Number.isFinite(n)?n.toLocaleString(M,{maximumFractionDigits:3}):t.state;return s?`${r} ${s}`:r}var ft=class extends f{constructor(){super(...arguments);this.saving=!1}static{this.properties={hass:{attribute:!1},entry:{attribute:!1},localize:{attribute:!1},draft:{state:!0},error:{state:!0},saving:{state:!0}}}async save(){if(this.draft){this.saving=!0;try{await Wt(this.hass,this.entry.entry_id,this.draft),this.draft=void 0,z(this,"raincast-entries-changed")}catch(t){this.error=te(t)}finally{this.saving=!1}}}render(){let t=this.localize;return a`
       <section class="card">
         <h2>${t("settings.sources")}</h2>
         ${this.draft?this.renderForm():this.renderSummary()}
@@ -918,7 +951,7 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
       <h3>${t("src.zones")}</h3>
       ${this.entry.zones.map(s=>a`
           <div class="zone-name">${s.name}</div>
-          ${s.soil_sensor?this.renderEntity(mt(this.hass,s.soil_sensor),s.soil_sensor,t("src.zone_soil")):c}
+          ${s.soil_sensor?this.renderEntity(mt(this.hass,s.soil_sensor),s.soil_sensor,t("src.zone_soil")):h}
           ${s.valves.map(n=>this.renderEntity(mt(this.hass,n),n,t(this.entry.native_valves.includes(n)?"src.native":"src.open_close")))}
         `)}
       <p class="muted small">${t("settings.sources_hint")}</p>
@@ -930,7 +963,7 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
           ${t("action.edit")}
         </button>
       </div>
-    `}renderEntity(t,s,n){let r=this.localize,o=!!s&&!this.hass.states[s],h=!!s&&["unavailable","unknown"].includes(this.hass.states[s]?.state??"");return a`
+    `}renderEntity(t,s,n){let r=this.localize,o=!!s&&!this.hass.states[s],c=!!s&&["unavailable","unknown"].includes(this.hass.states[s]?.state??"");return a`
       <div class="entity">
         <div class="grow">
           <div>${t}</div>
@@ -938,10 +971,10 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
             ${s?a`${s}${n?` \xB7 ${n}`:""}`:r("home.not_configured")}
           </div>
         </div>
-        ${s?a`<span class="value ${o||h?"bad":""}">${ke(this.hass,s)}</span>`:c}
+        ${s?a`<span class="value ${o||c?"bad":""}">${ke(this.hass,s)}</span>`:h}
       </div>
     `}renderForm(){let t=this.localize,s=this.draft;return a`
-      ${_e.map(n=>a`
+      ${$e.map(n=>a`
           <div class="field">
             <label>${t(n.label)}</label>
             <raincast-entity-picker
@@ -955,12 +988,12 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
           </div>
         `)}
       <p class="muted small">${t("settings.reload_hint")}</p>
-      ${this.error?a`<div class="error">${this.error}</div>`:c}
+      ${this.error?a`<div class="error">${this.error}</div>`:h}
       <div class="actions">
         <button class="text" @click=${()=>this.draft=void 0}>${t("settings.cancel")}</button>
         <button class="text primary" ?disabled=${this.saving} @click=${this.save}>${t("action.save")}</button>
       </div>
-    `}static{this.styles=[y,L,f`
+    `}static{this.styles=[w,L,g`
       h3 {
         margin: 12px 0 4px;
         font-size: 0.8rem;
@@ -1001,34 +1034,34 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
       .zone-name ~ .entity {
         padding-left: 12px;
       }
-    `]}},vt=class extends m{constructor(){super(...arguments);this.confirmRemove=!1;this.saving=!1}static{this.properties={hass:{attribute:!1},entry:{attribute:!1},localize:{attribute:!1},focusZone:{attribute:!1},editing:{state:!0},draft:{state:!0},confirmRemove:{state:!0},error:{state:!0},saving:{state:!0}}}startEdit(t){this.editing=t?.id??"new",this.draft={name:t?.name??"",valves:[...t?.valves??[]],roofed:t?.roofed??!1,mower_conflict:t?.mower_conflict??!1,soil_sensor:t?.soil_sensor??null},this.confirmRemove=!1,this.error=void 0}stopEdit(){this.editing=void 0,this.draft=void 0}async run(t){this.saving=!0;try{await t(),this.stopEdit(),z(this,"raincast-entries-changed")}catch(s){this.error=te(s)}finally{this.saving=!1}}render(){let t=this.localize,s=!!this.entry.sources.water_meter;return a`
+    `]}},gt=class extends f{constructor(){super(...arguments);this.confirmRemove=!1;this.saving=!1}static{this.properties={hass:{attribute:!1},entry:{attribute:!1},localize:{attribute:!1},focusZone:{attribute:!1},editing:{state:!0},draft:{state:!0},confirmRemove:{state:!0},error:{state:!0},saving:{state:!0}}}startEdit(t){this.editing=t?.id??"new",this.draft={name:t?.name??"",valves:[...t?.valves??[]],roofed:t?.roofed??!1,mower_conflict:t?.mower_conflict??!1,soil_sensor:t?.soil_sensor??null},this.confirmRemove=!1,this.error=void 0}stopEdit(){this.editing=void 0,this.draft=void 0}async run(t){this.saving=!0;try{await t(),this.stopEdit(),z(this,"raincast-entries-changed")}catch(s){this.error=te(s)}finally{this.saving=!1}}render(){let t=this.localize,s=!!this.entry.sources.water_meter;return a`
       <section class="card">
         <h2>${t("settings.zones")}</h2>
         ${this.entry.zones.map(n=>this.editing===n.id?this.renderForm(n):this.renderZone(n))}
         ${this.editing==="new"?this.renderForm():a`<div class="actions">
               <button class="text primary" @click=${()=>this.startEdit()}>+ ${t("action.add_zone")}</button>
             </div>`}
-        ${s?a`<p class="muted small">${t("zone.max_flow_hint")}</p>`:c}
+        ${s?a`<p class="muted small">${t("zone.max_flow_hint")}</p>`:h}
       </section>
     `}updated(t){t.has("focusZone")&&this.focusZone&&this.renderRoot.querySelector(`[data-zone="${this.focusZone}"]`)?.scrollIntoView({behavior:"smooth",block:"center"})}renderZone(t){let s=this.localize,n=V(t),r=jt(t);return a`
       <div class="zone-block ${t.id===this.focusZone?"focus":""}" data-zone=${t.id}>
         <div class="zone">
           <ha-icon icon=${t.roofed?"mdi:greenhouse":"mdi:sprinkler"}></ha-icon>
           <div class="grow">
-            ${t.name}${t.roofed?a` <span class="muted small">· ${s("zone.roofed")}</span>`:c}
-            ${t.mower_conflict?a` <span class="muted small">· ${s("zone.mower_conflict")}</span>`:c}
+            ${t.name}${t.roofed?a` <span class="muted small">· ${s("zone.roofed")}</span>`:h}
+            ${t.mower_conflict?a` <span class="muted small">· ${s("zone.mower_conflict")}</span>`:h}
           </div>
           <button class="text icon" title=${s("action.edit")} @click=${()=>this.startEdit(t)}>
             <ha-icon icon="mdi:pencil"></ha-icon>
           </button>
         </div>
-        ${this.renderStart(t)} ${_(this.hass,t.entities.interval,s("zone.interval"))}
-        ${_(this.hass,t.entities.soil_max,s("zone.soil_max"))}
-        ${t.valves.map((o,h)=>a`
+        ${this.renderStart(t)} ${$(this.hass,t.entities.interval,s("zone.interval"))}
+        ${$(this.hass,t.entities.soil_max,s("zone.soil_max"))}
+        ${t.valves.map((o,c)=>a`
             <div class="valve-tuning">
               <div class="valve-name">${mt(this.hass,o)}</div>
-              ${_(this.hass,n[h],s("zone.time"))}
-              ${_(this.hass,r[h],s("zone.max_flow"))}
+              ${$(this.hass,n[c],s("zone.time"))}
+              ${$(this.hass,r[c],s("zone.max_flow"))}
             </div>
           `)}
       </div>
@@ -1042,7 +1075,7 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
           ${ze.map(o=>a`<option value=${o} ?selected=${o===n}>${s(`mode.${o}`)}</option>`)}
         </select>
       </div>
-      ${n==="before_sunrise"?_(this.hass,t.entities.sunrise_offset,s("zone.sunrise_offset")):c}
+      ${n==="before_sunrise"?$(this.hass,t.entities.sunrise_offset,s("zone.sunrise_offset")):h}
       ${n==="at_time"?a`<div class="number">
             <span class="label">${s("zone.start_time")}</span>
             <input
@@ -1051,8 +1084,8 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
               .value=${r.slice(0,5)}
               @change=${o=>this.hass.callService("time","set_value",{entity_id:t.entities.start_time,time:`${o.target.value}:00`})}
             />
-          </div>`:c}
-    `}renderForm(t){let s=this.localize,n=this.draft,r=n.valves.filter(l=>!!l),o=n.name.trim().length>0&&r.length>0,h=(l,p)=>{let u=[...n.valves];u[l]=p??"",this.draft={...n,valves:u}},d=()=>{let l={...n,valves:r};return this.run(()=>t?Dt(this.hass,this.entry.entry_id,t.id,l):Wt(this.hass,this.entry.entry_id,{...l,interval:Ae,duration:Ee}))};return a`
+          </div>`:h}
+    `}renderForm(t){let s=this.localize,n=this.draft,r=n.valves.filter(l=>!!l),o=n.name.trim().length>0&&r.length>0,c=(l,p)=>{let u=[...n.valves];u[l]=p??"",this.draft={...n,valves:u}},d=()=>{let l={...n,valves:r};return this.run(()=>t?Dt(this.hass,this.entry.entry_id,t.id,l):Ut(this.hass,this.entry.entry_id,{...l,interval:Ae,duration:Ee}))};return a`
       <div class="form">
         <div class="field">
           <label>${s("zone.name")} *</label>
@@ -1095,15 +1128,15 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
               <div class="valve-row">
                 <raincast-entity-picker
                   .hass=${this.hass}
-                  .domains=${$e}
+                  .domains=${_e}
                   .value=${l||null}
                   optional
-                  @value-changed=${u=>h(p,u.detail)}
+                  @value-changed=${u=>c(p,u.detail)}
                 ></raincast-entity-picker>
                 <button
                   class="text icon"
                   title=${s("action.remove")}
-                  @click=${()=>this.draft={...n,valves:n.valves.filter((u,g)=>g!==p)}}
+                  @click=${()=>this.draft={...n,valves:n.valves.filter((u,v)=>v!==p)}}
                 >
                   <ha-icon icon="mdi:close"></ha-icon>
                 </button>
@@ -1116,7 +1149,7 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
           </div>
         </div>
         <p class="muted small">${s(t?"zone.edit_hint":"zone.new_hint")}</p>
-        ${this.error?a`<div class="error">${this.error}</div>`:c}
+        ${this.error?a`<div class="error">${this.error}</div>`:h}
         ${this.confirmRemove&&t?a`<div class="confirm">
               <span>${s("zone.remove_confirm",{name:t.name})}</span>
               <button class="text" @click=${()=>this.confirmRemove=!1}>${s("settings.cancel")}</button>
@@ -1126,9 +1159,9 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
               >
                 ${s("action.remove")}
               </button>
-            </div>`:c}
+            </div>`:h}
         <div class="actions">
-          ${t?a`<button class="text danger" @click=${()=>this.confirmRemove=!0}>${s("action.remove")}</button>`:c}
+          ${t?a`<button class="text danger" @click=${()=>this.confirmRemove=!0}>${s("action.remove")}</button>`:h}
           <span class="spacer"></span>
           <button class="text" @click=${()=>this.stopEdit()}>${s("settings.cancel")}</button>
           <button class="text primary" ?disabled=${!o||this.saving} @click=${d}>
@@ -1136,7 +1169,7 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
           </button>
         </div>
       </div>
-    `}static{this.styles=[y,L,f`
+    `}static{this.styles=[w,L,g`
       .zone-block {
         border-bottom: 1px solid var(--divider-color);
         padding: 6px 0 8px;
@@ -1224,10 +1257,11 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
       .confirm span {
         flex: 1;
       }
-    `]}};customElements.get("raincast-sources-card")??customElements.define("raincast-sources-card",ft);customElements.get("raincast-zones-card")??customElements.define("raincast-zones-card",vt);var Se=["sunrise","sunset","at_time","off"],Te=Array.from({length:12},(i,e)=>new Date(2026,e,1).toLocaleDateString(M,{month:"long"})),gt=class extends m{constructor(){super(...arguments);this.confirming=!1}static{this.properties={hass:{attribute:!1},entry:{attribute:!1},localize:{attribute:!1},focusZone:{attribute:!1},confirming:{state:!0}}}render(){return this.hass.user?.is_admin?a`
+    `]}};customElements.get("raincast-sources-card")??customElements.define("raincast-sources-card",ft);customElements.get("raincast-zones-card")??customElements.define("raincast-zones-card",gt);var Se=["sunrise","sunset","at_time","off"],Te=Array.from({length:12},(i,e)=>new Date(2026,e,1).toLocaleDateString(M,{month:"long"})),vt=class extends f{constructor(){super(...arguments);this.confirming=!1}static{this.properties={hass:{attribute:!1},entry:{attribute:!1},localize:{attribute:!1},focusZone:{attribute:!1},confirming:{state:!0}}}render(){if(!this.hass.user?.is_admin)return a`<section class="card muted">${this.localize("settings.admin_only")}</section>`;let t=this.localize,s=!!this.entry.entities.automatic_mowing;return a`
+      <h1 class="section"><ha-icon icon="mdi:sprinkler-variant"></ha-icon>${t("section.watering")}</h1>
       <div class="layout">
-        <div class="column">${this.renderControl()} ${this.renderSeason()} ${this.renderMower()}</div>
-        <div class="column">
+        <div class="column">${this.renderWatering()} ${this.renderWateringRules()}</div>
+        <div class="column wide">
           <raincast-zones-card
             .hass=${this.hass}
             .entry=${this.entry}
@@ -1235,15 +1269,25 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
             .focusZone=${this.focusZone}
           ></raincast-zones-card>
         </div>
+      </div>
+      ${s?a`
+            <h1 class="section"><ha-icon icon="mdi:robot-mower-outline"></ha-icon>${t("section.mowing")}</h1>
+            <div class="layout">
+              <div class="column">${this.renderMowing()}</div>
+              <div class="column">${this.renderMowingRules()}</div>
+            </div>
+          `:h}
+      <h1 class="section"><ha-icon icon="mdi:cog-outline"></ha-icon>${t("section.general")}</h1>
+      <div class="layout">
         <div class="column">
           <raincast-sources-card .hass=${this.hass} .entry=${this.entry} .localize=${this.localize}></raincast-sources-card>
-          ${this.renderNotifications()}
         </div>
+        <div class="column">${this.renderNotifications()}</div>
       </div>
       <p class="small">
-        <a href="/config/integrations/integration/raincast">${this.localize("settings.entities")}</a>
+        <a href="/config/integrations/integration/raincast">${t("settings.entities")}</a>
       </p>
-    `:a`<section class="card muted">${this.localize("settings.admin_only")}</section>`}renderToggle(t,s,n,r){return a`
+    `}renderToggle(t,s,n,r){return a`
       <div class="toggle-row">
         <div>
           <div>${this.localize(t)}</div>
@@ -1253,27 +1297,11 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
           <span></span>
         </button>
       </div>
-    `}renderControl(){let t=this.localize,s=this.entry.entities.control,n=r=>this.hass.callService("switch",r?"turn_on":"turn_off",{entity_id:s});return a`
-      <section class="card">
-        <h2>${t("settings.control_title")}</h2>
-        ${this.renderToggle("settings.control","settings.control_hint",w(this.hass,s),r=>{if(r){this.confirming=!0;return}n(!1)})}
-        ${this.confirming?a`<div class="confirm">
-              <span>${t("settings.control_confirm")}</span>
-              <button class="text" @click=${()=>this.confirming=!1}>${t("settings.cancel")}</button>
-              <button
-                class="text primary"
-                @click=${()=>{this.confirming=!1,n(!0)}}
-              >
-                ${t("settings.confirm")}
-              </button>
-            </div>`:c}
-        ${this.renderToggle("settings.automatic","settings.automatic_hint",w(this.hass,this.entry.entities.automatic),r=>this.hass.callService("switch",r?"turn_on":"turn_off",{entity_id:this.entry.entities.automatic}))}
-      </section>
-    `}month(t,s){let n=this.localize;return a`
+    `}switchTo(t,s){this.hass.callService("switch",s?"turn_on":"turn_off",{entity_id:t})}month(t,s){let n=this.localize;return a`
       <div class="number">
         <span class="label">${n(s)}</span>
         <select
-          class="month"
+          class="inline"
           @change=${r=>this.hass.callService("select","select_option",{entity_id:t,option:r.target.value})}
         >
           ${Te.map((r,o)=>a`<option value=${o+1} ?selected=${this.hass.states[t]?.state===String(o+1)}>
@@ -1281,29 +1309,47 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
               </option>`)}
         </select>
       </div>
-    `}renderSeason(){let t=this.localize,s=this.entry.entities;return a`
+    `}renderWatering(){let t=this.localize,s=this.entry.entities;return a`
       <section class="card">
-        <h2>${t("settings.season")}</h2>
+        <h2>${t("settings.watering")}</h2>
+        ${this.renderToggle("settings.automatic","settings.automatic_hint",b(this.hass,s.automatic),n=>this.switchTo(s.automatic,n))}
+        ${this.renderToggle("settings.control","settings.control_hint",b(this.hass,s.control),n=>{if(n){this.confirming=!0;return}this.switchTo(s.control,!1)})}
+        ${this.confirming?a`<div class="confirm">
+              <span>${t("settings.control_confirm")}</span>
+              <button class="text" @click=${()=>this.confirming=!1}>${t("settings.cancel")}</button>
+              <button
+                class="text primary"
+                @click=${()=>{this.confirming=!1,this.switchTo(s.control,!0)}}
+              >
+                ${t("settings.confirm")}
+              </button>
+            </div>`:h}
+        <div class="divider"></div>
         ${this.month(s.season_start,"settings.season_start")} ${this.month(s.season_end,"settings.season_end")}
         <p class="muted small">${t("settings.season_hint")}</p>
-        ${_(this.hass,s.rain_max,t("settings.rain_max"))}
-        ${_(this.hass,s.frost_min,t("settings.frost_min"))}
+      </section>
+    `}renderWateringRules(){let t=this.localize,s=this.entry.entities;return a`
+      <section class="card">
+        <h2>${t("settings.watering_rules")}</h2>
+        ${$(this.hass,s.rain_max,t("settings.rain_max"))}
+        ${$(this.hass,s.frost_min,t("settings.frost_min"))}
         <p class="muted small">${t("settings.limits_hint")}</p>
       </section>
-    `}renderMower(){let t=this.localize,s=this.entry.entities;if(!s.automatic_mowing)return c;let n=this.hass.states[s.mower_start_mode]?.state,r=this.hass.states[s.mower_start_time]?.state??"";return a`
+    `}renderMowing(){let t=this.localize,s=this.entry.entities,n=this.hass.states[s.mower_start_mode]?.state,r=this.hass.states[s.mower_start_time]?.state??"";return a`
       <section class="card">
-        <h2>${t("settings.mower")}</h2>
-        ${this.renderToggle("settings.automatic_mowing","settings.automatic_mowing_hint",w(this.hass,s.automatic_mowing),o=>this.hass.callService("switch",o?"turn_on":"turn_off",{entity_id:s.automatic_mowing}))}
+        <h2>${t("settings.mowing")}</h2>
+        ${this.renderToggle("settings.automatic_mowing","settings.automatic_mowing_hint",b(this.hass,s.automatic_mowing),o=>this.switchTo(s.automatic_mowing,o))}
+        <div class="divider"></div>
         <div class="number">
           <span class="label">${t("settings.mower_start")}</span>
           <select
-            class="month"
+            class="inline"
             @change=${o=>this.hass.callService("select","select_option",{entity_id:s.mower_start_mode,option:o.target.value})}
           >
             ${Se.map(o=>a`<option value=${o} ?selected=${o===n}>${t(`mowmode.${o}`)}</option>`)}
           </select>
         </div>
-        ${n==="sunrise"||n==="sunset"?_(this.hass,s.mower_offset,t("settings.mower_offset")):c}
+        ${n==="sunrise"||n==="sunset"?$(this.hass,s.mower_offset,t("settings.mower_offset")):h}
         ${n==="at_time"?a`<div class="number">
               <span class="label">${t("zone.start_time")}</span>
               <input
@@ -1312,11 +1358,16 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
                 .value=${r.slice(0,5)}
                 @change=${o=>this.hass.callService("time","set_value",{entity_id:s.mower_start_time,time:`${o.target.value}:00`})}
               />
-            </div>`:c}
-        ${this.month(s.mower_season_start,"settings.mower_season_start")}
-        ${this.month(s.mower_season_end,"settings.mower_season_end")}
-        ${_(this.hass,s.dry_hours,t("settings.dry_hours"))}
-        ${_(this.hass,s.rain_ahead_hours,t("settings.rain_ahead_hours"))}
+            </div>`:h}
+        ${this.month(s.mower_season_start,"settings.season_start")}
+        ${this.month(s.mower_season_end,"settings.season_end")}
+        <p class="muted small">${t("settings.mower_season_hint")}</p>
+      </section>
+    `}renderMowingRules(){let t=this.localize,s=this.entry.entities;return a`
+      <section class="card">
+        <h2>${t("settings.mowing_rules")}</h2>
+        ${$(this.hass,s.dry_hours,t("settings.dry_hours"))}
+        ${$(this.hass,s.rain_ahead_hours,t("settings.rain_ahead_hours"))}
         <p class="muted small">${t("settings.mower_hint")}</p>
       </section>
     `}renderNotifications(){let t=this.localize,s=this.hass.states[this.entry.entities.problem]?.attributes.problems??[],n=[...this.entry.notify_services],r=this.entry.notify_service;return r&&!n.includes(r)&&n.unshift(r),a`
@@ -1328,7 +1379,7 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
         <div class="field">
           <label>${t("settings.notify_service")}</label>
           <select
-            @change=${async o=>{let h=o.target.value||null;await It(this.hass,this.entry.entry_id,h),z(this,"raincast-entries-changed")}}
+            @change=${async o=>{let c=o.target.value||null;await It(this.hass,this.entry.entry_id,c),z(this,"raincast-entries-changed")}}
           >
             <option value="" ?selected=${!r}>${t("settings.notify_none")}</option>
             ${n.map(o=>a`<option value=${o} ?selected=${o===r}>notify.${o}</option>`)}
@@ -1336,13 +1387,39 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
         </div>
         <p class="muted small">${t("settings.notify_hint")}</p>
       </section>
-    `}static{this.styles=[y,L,f`
+    `}static{this.styles=[w,L,g`
       /* Every card has a fixed column, so a card that grows never moves the others. */
       .layout {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: var(--rc-gap);
         align-items: start;
+      }
+      .column.wide {
+        grid-column: span 2;
+      }
+      h1.section {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 28px 0 12px;
+        font-size: 1.1rem;
+        font-weight: 500;
+      }
+      h1.section:first-child {
+        margin-top: 4px;
+      }
+      h1.section ha-icon {
+        --mdc-icon-size: 22px;
+        color: var(--primary-color);
+      }
+      .divider {
+        border-top: 1px solid var(--divider-color);
+        margin: 8px 0;
+      }
+      select.inline {
+        width: auto;
+        min-width: 150px;
       }
       .column {
         display: flex;
@@ -1353,6 +1430,9 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
       @media (max-width: 1250px) {
         .layout {
           grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .column.wide {
+          grid-column: span 1;
         }
       }
       @media (max-width: 760px) {
@@ -1420,14 +1500,14 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
         padding-left: 20px;
         color: var(--rc-error);
       }
-    `]}};customElements.get("raincast-settings")??customElements.define("raincast-settings",gt);var Re=[{id:"home",label:"tab.home",icon:"mdi:sprinkler-variant"},{id:"history",label:"tab.history",icon:"mdi:chart-line"},{id:"settings",label:"tab.settings",icon:"mdi:tune-variant"},{id:"guide",label:"tab.guide",icon:"mdi:book-open-variant"}],Ce=1500,yt=class extends m{constructor(){super(...arguments);this.narrow=!1;this.tab="home";this.loading=!1;this.localize=Gt();this.openZone=t=>{this.focusZone=t.detail,this.tab="settings"};this.entriesChanged=()=>{window.setTimeout(()=>this.load(),Ce)}}static{this.properties={hass:{attribute:!1},narrow:{type:Boolean},entries:{state:!0},entryId:{state:!0},tab:{state:!0},focusZone:{state:!0},error:{state:!0}}}willUpdate(t){t.has("hass")&&this.hass&&!this.entries&&!this.loading&&this.load();let s=this.entries?.find(r=>r.entry_id===this.entryId),n=s?this.hass.states[s.entities.running]?.state:void 0;this.wasRunning==="on"&&n==="off"&&this.entriesChanged(),this.wasRunning=n}async load(){this.loading=!0;try{this.entries=await Zt(this.hass),this.entries.some(s=>s.entry_id===this.entryId)||(this.entryId=this.entries[0]?.entry_id),this.error=void 0}catch(t){this.error=String(t?.message??t)}finally{this.loading=!1}}selectTab(t){this.tab=t,this.focusZone=void 0}connectedCallback(){super.connectedCallback(),this.addEventListener("raincast-entries-changed",this.entriesChanged),this.addEventListener("raincast-open-zone",this.openZone),this.hass&&this.load()}disconnectedCallback(){super.disconnectedCallback(),this.removeEventListener("raincast-entries-changed",this.entriesChanged),this.removeEventListener("raincast-open-zone",this.openZone)}render(){let t=this.entries?.find(s=>s.entry_id===this.entryId);return a`
+    `]}};customElements.get("raincast-settings")??customElements.define("raincast-settings",vt);var Re=[{id:"home",label:"tab.home",icon:"mdi:sprinkler-variant"},{id:"history",label:"tab.history",icon:"mdi:chart-line"},{id:"settings",label:"tab.settings",icon:"mdi:tune-variant"},{id:"guide",label:"tab.guide",icon:"mdi:book-open-variant"}],Ce=1500,yt=class extends f{constructor(){super(...arguments);this.narrow=!1;this.tab="home";this.loading=!1;this.localize=Gt();this.openZone=t=>{this.focusZone=t.detail,this.tab="settings"};this.entriesChanged=()=>{window.setTimeout(()=>this.load(),Ce)}}static{this.properties={hass:{attribute:!1},narrow:{type:Boolean},entries:{state:!0},entryId:{state:!0},tab:{state:!0},focusZone:{state:!0},error:{state:!0}}}willUpdate(t){t.has("hass")&&this.hass&&!this.entries&&!this.loading&&this.load();let s=this.entries?.find(r=>r.entry_id===this.entryId),n=s?this.hass.states[s.entities.running]?.state:void 0;this.wasRunning==="on"&&n==="off"&&this.entriesChanged(),this.wasRunning=n}async load(){this.loading=!0;try{this.entries=await Zt(this.hass),this.entries.some(s=>s.entry_id===this.entryId)||(this.entryId=this.entries[0]?.entry_id),this.error=void 0}catch(t){this.error=String(t?.message??t)}finally{this.loading=!1}}selectTab(t){this.tab=t,this.focusZone=void 0}connectedCallback(){super.connectedCallback(),this.addEventListener("raincast-entries-changed",this.entriesChanged),this.addEventListener("raincast-open-zone",this.openZone),this.hass&&this.load()}disconnectedCallback(){super.disconnectedCallback(),this.removeEventListener("raincast-entries-changed",this.entriesChanged),this.removeEventListener("raincast-open-zone",this.openZone)}render(){let t=this.entries?.find(s=>s.entry_id===this.entryId);return a`
       <div class="header">
         <div class="toolbar">
           <ha-menu-button .hass=${this.hass} .narrow=${this.narrow}></ha-menu-button>
           <div class="title">${t?.title??"RainCast"}</div>
           ${(this.entries?.length??0)>1?a`<select @change=${s=>this.entryId=s.target.value}>
                 ${this.entries.map(s=>a`<option value=${s.entry_id} ?selected=${s.entry_id===this.entryId}>${s.title}</option>`)}
-              </select>`:c}
+              </select>`:h}
         </div>
         <nav>
           ${Re.map(s=>a`
@@ -1443,7 +1523,7 @@ var j=globalThis,B=j.ShadowRoot&&(j.ShadyCSS===void 0||j.ShadyCSS.nativeShadow)&
           .entry=${t}
           .localize=${s.localize}
           .focusZone=${this.focusZone}
-        ></raincast-settings>`;default:return a`<raincast-home .hass=${s.hass} .entry=${t} .localize=${s.localize}></raincast-home>`}}static{this.styles=[y,f`
+        ></raincast-settings>`;default:return a`<raincast-home .hass=${s.hass} .entry=${t} .localize=${s.localize}></raincast-home>`}}static{this.styles=[w,g`
       :host {
         display: block;
         min-height: 100vh;

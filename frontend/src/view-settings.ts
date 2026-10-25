@@ -30,10 +30,13 @@ export class RainCastSettings extends LitElement {
     if (!this.hass.user?.is_admin) {
       return html`<section class="card muted">${this.localize("settings.admin_only")}</section>`;
     }
+    const t = this.localize;
+    const mower = !!this.entry.entities.automatic_mowing;
     return html`
+      <h1 class="section"><ha-icon icon="mdi:sprinkler-variant"></ha-icon>${t("section.watering")}</h1>
       <div class="layout">
-        <div class="column">${this.renderControl()} ${this.renderSeason()} ${this.renderMower()}</div>
-        <div class="column">
+        <div class="column">${this.renderWatering()} ${this.renderWateringRules()}</div>
+        <div class="column wide">
           <raincast-zones-card
             .hass=${this.hass}
             .entry=${this.entry}
@@ -41,13 +44,25 @@ export class RainCastSettings extends LitElement {
             .focusZone=${this.focusZone}
           ></raincast-zones-card>
         </div>
+      </div>
+      ${mower
+        ? html`
+            <h1 class="section"><ha-icon icon="mdi:robot-mower-outline"></ha-icon>${t("section.mowing")}</h1>
+            <div class="layout">
+              <div class="column">${this.renderMowing()}</div>
+              <div class="column">${this.renderMowingRules()}</div>
+            </div>
+          `
+        : nothing}
+      <h1 class="section"><ha-icon icon="mdi:cog-outline"></ha-icon>${t("section.general")}</h1>
+      <div class="layout">
         <div class="column">
           <raincast-sources-card .hass=${this.hass} .entry=${this.entry} .localize=${this.localize}></raincast-sources-card>
-          ${this.renderNotifications()}
         </div>
+        <div class="column">${this.renderNotifications()}</div>
       </div>
       <p class="small">
-        <a href="/config/integrations/integration/raincast">${this.localize("settings.entities")}</a>
+        <a href="/config/integrations/integration/raincast">${t("settings.entities")}</a>
       </p>
     `;
   }
@@ -66,40 +81,8 @@ export class RainCastSettings extends LitElement {
     `;
   }
 
-  private renderControl(): TemplateResult {
-    const t = this.localize;
-    const control = this.entry.entities.control;
-    const switchTo = (on: boolean) => this.hass.callService("switch", on ? "turn_on" : "turn_off", { entity_id: control });
-    return html`
-      <section class="card">
-        <h2>${t("settings.control_title")}</h2>
-        ${this.renderToggle("settings.control", "settings.control_hint", isOn(this.hass, control), (on) => {
-          if (on) {
-            this.confirming = true;
-            return;
-          }
-          switchTo(false);
-        })}
-        ${this.confirming
-          ? html`<div class="confirm">
-              <span>${t("settings.control_confirm")}</span>
-              <button class="text" @click=${() => (this.confirming = false)}>${t("settings.cancel")}</button>
-              <button
-                class="text primary"
-                @click=${() => {
-                  this.confirming = false;
-                  switchTo(true);
-                }}
-              >
-                ${t("settings.confirm")}
-              </button>
-            </div>`
-          : nothing}
-        ${this.renderToggle("settings.automatic", "settings.automatic_hint", isOn(this.hass, this.entry.entities.automatic), (on) =>
-          this.hass.callService("switch", on ? "turn_on" : "turn_off", { entity_id: this.entry.entities.automatic }),
-        )}
-      </section>
-    `;
+  private switchTo(entityId: string, on: boolean): void {
+    this.hass.callService("switch", on ? "turn_on" : "turn_off", { entity_id: entityId });
   }
 
   private month(entityId: string, label: TranslationKey): TemplateResult {
@@ -108,7 +91,7 @@ export class RainCastSettings extends LitElement {
       <div class="number">
         <span class="label">${t(label)}</span>
         <select
-          class="month"
+          class="inline"
           @change=${(event: Event) =>
             this.hass.callService("select", "select_option", {
               entity_id: entityId,
@@ -126,14 +109,52 @@ export class RainCastSettings extends LitElement {
     `;
   }
 
-  private renderSeason(): TemplateResult {
+  /** Main switches of watering, then its season. */
+  private renderWatering(): TemplateResult {
     const t = this.localize;
     const e = this.entry.entities;
     return html`
       <section class="card">
-        <h2>${t("settings.season")}</h2>
+        <h2>${t("settings.watering")}</h2>
+        ${this.renderToggle("settings.automatic", "settings.automatic_hint", isOn(this.hass, e.automatic), (on) =>
+          this.switchTo(e.automatic, on),
+        )}
+        ${this.renderToggle("settings.control", "settings.control_hint", isOn(this.hass, e.control), (on) => {
+          if (on) {
+            this.confirming = true;
+            return;
+          }
+          this.switchTo(e.control, false);
+        })}
+        ${this.confirming
+          ? html`<div class="confirm">
+              <span>${t("settings.control_confirm")}</span>
+              <button class="text" @click=${() => (this.confirming = false)}>${t("settings.cancel")}</button>
+              <button
+                class="text primary"
+                @click=${() => {
+                  this.confirming = false;
+                  this.switchTo(e.control, true);
+                }}
+              >
+                ${t("settings.confirm")}
+              </button>
+            </div>`
+          : nothing}
+        <div class="divider"></div>
         ${this.month(e.season_start, "settings.season_start")} ${this.month(e.season_end, "settings.season_end")}
         <p class="muted small">${t("settings.season_hint")}</p>
+      </section>
+    `;
+  }
+
+  /** What holds watering: rain and frost; soil limits are per zone. */
+  private renderWateringRules(): TemplateResult {
+    const t = this.localize;
+    const e = this.entry.entities;
+    return html`
+      <section class="card">
+        <h2>${t("settings.watering_rules")}</h2>
         ${numberControl(this.hass, e.rain_max, t("settings.rain_max"))}
         ${numberControl(this.hass, e.frost_min, t("settings.frost_min"))}
         <p class="muted small">${t("settings.limits_hint")}</p>
@@ -141,22 +162,23 @@ export class RainCastSettings extends LitElement {
     `;
   }
 
-  private renderMower(): TemplateResult | typeof nothing {
+  /** Main switch of mowing, then its start and season. */
+  private renderMowing(): TemplateResult {
     const t = this.localize;
     const e = this.entry.entities;
-    if (!e.automatic_mowing) return nothing;
     const mode = this.hass.states[e.mower_start_mode]?.state;
     const startTime = this.hass.states[e.mower_start_time]?.state ?? "";
     return html`
       <section class="card">
-        <h2>${t("settings.mower")}</h2>
+        <h2>${t("settings.mowing")}</h2>
         ${this.renderToggle("settings.automatic_mowing", "settings.automatic_mowing_hint", isOn(this.hass, e.automatic_mowing), (on) =>
-          this.hass.callService("switch", on ? "turn_on" : "turn_off", { entity_id: e.automatic_mowing }),
+          this.switchTo(e.automatic_mowing, on),
         )}
+        <div class="divider"></div>
         <div class="number">
           <span class="label">${t("settings.mower_start")}</span>
           <select
-            class="month"
+            class="inline"
             @change=${(event: Event) =>
               this.hass.callService("select", "select_option", {
                 entity_id: e.mower_start_mode,
@@ -185,8 +207,20 @@ export class RainCastSettings extends LitElement {
               />
             </div>`
           : nothing}
-        ${this.month(e.mower_season_start, "settings.mower_season_start")}
-        ${this.month(e.mower_season_end, "settings.mower_season_end")}
+        ${this.month(e.mower_season_start, "settings.season_start")}
+        ${this.month(e.mower_season_end, "settings.season_end")}
+        <p class="muted small">${t("settings.mower_season_hint")}</p>
+      </section>
+    `;
+  }
+
+  /** What keeps the mower in: rain behind and ahead; watering and frost come from the zones and the watering rules. */
+  private renderMowingRules(): TemplateResult {
+    const t = this.localize;
+    const e = this.entry.entities;
+    return html`
+      <section class="card">
+        <h2>${t("settings.mowing_rules")}</h2>
         ${numberControl(this.hass, e.dry_hours, t("settings.dry_hours"))}
         ${numberControl(this.hass, e.rain_ahead_hours, t("settings.rain_ahead_hours"))}
         <p class="muted small">${t("settings.mower_hint")}</p>
@@ -239,6 +273,32 @@ export class RainCastSettings extends LitElement {
         gap: var(--rc-gap);
         align-items: start;
       }
+      .column.wide {
+        grid-column: span 2;
+      }
+      h1.section {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 28px 0 12px;
+        font-size: 1.1rem;
+        font-weight: 500;
+      }
+      h1.section:first-child {
+        margin-top: 4px;
+      }
+      h1.section ha-icon {
+        --mdc-icon-size: 22px;
+        color: var(--primary-color);
+      }
+      .divider {
+        border-top: 1px solid var(--divider-color);
+        margin: 8px 0;
+      }
+      select.inline {
+        width: auto;
+        min-width: 150px;
+      }
       .column {
         display: flex;
         flex-direction: column;
@@ -248,6 +308,9 @@ export class RainCastSettings extends LitElement {
       @media (max-width: 1250px) {
         .layout {
           grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .column.wide {
+          grid-column: span 1;
         }
       }
       @media (max-width: 760px) {
