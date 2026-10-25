@@ -1,6 +1,6 @@
 [project]
 name = "raincast"
-version = "0.3.0"
+version = "0.3.1"
 description = "Weather-aware irrigation scheduling for Home Assistant"
 requires-python = ">=3.13"
 license = "MIT"
