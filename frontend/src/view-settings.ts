@@ -1,12 +1,14 @@
 import { LitElement, css, html, nothing, type TemplateResult } from "lit";
 import { type EntryInfo, setNotifyService } from "./api";
 import { type HomeAssistant, fireEvent, isOn } from "./ha";
-import type { Localize, TranslationKey } from "./localize";
+import { LANGUAGE, type Localize, type TranslationKey } from "./localize";
 import { controlStyles, numberControl } from "./number-control";
 import "./setup-cards";
 import { shared } from "./styles";
 
-const START_MODES = ["before_sunrise", "at_time", "off"];
+const MONTHS = Array.from({ length: 12 }, (_value, index) =>
+  new Date(2026, index, 1).toLocaleDateString(LANGUAGE, { month: "long" }),
+);
 
 export class RainCastSettings extends LitElement {
   static properties = {
@@ -29,7 +31,7 @@ export class RainCastSettings extends LitElement {
     }
     return html`
       <div class="layout">
-        <div class="column">${this.renderControl()} ${this.renderSchedule()} ${this.renderLimits()}</div>
+        <div class="column">${this.renderControl()} ${this.renderSeason()}</div>
         <div class="column">
           <raincast-zones-card
             .hass=${this.hass}
@@ -92,62 +94,43 @@ export class RainCastSettings extends LitElement {
               </button>
             </div>`
           : nothing}
+        ${this.renderToggle("settings.automatic", "settings.automatic_hint", isOn(this.hass, this.entry.entities.automatic), (on) =>
+          this.hass.callService("switch", on ? "turn_on" : "turn_off", { entity_id: this.entry.entities.automatic }),
+        )}
       </section>
     `;
   }
 
-  private renderSchedule(): TemplateResult {
+  private renderSeason(): TemplateResult {
     const t = this.localize;
     const e = this.entry.entities;
-    const mode = this.hass.states[e.start_mode]?.state;
-    const startTime = this.hass.states[e.start_time]?.state ?? "";
-    return html`
-      <section class="card">
-        <h2>${t("settings.schedule")}</h2>
-        <div class="field">
-          <label>${t("settings.start_mode")}</label>
-          <select
-            @change=${(event: Event) =>
-              this.hass.callService("select", "select_option", {
-                entity_id: e.start_mode,
-                option: (event.target as HTMLSelectElement).value,
-              })}
-          >
-            ${START_MODES.map(
-              (option) =>
-                html`<option value=${option} ?selected=${option === mode}>${t(`mode.${option}` as TranslationKey)}</option>`,
-            )}
-          </select>
-        </div>
-        ${mode === "before_sunrise" ? numberControl(this.hass, e.sunrise_offset, t("settings.sunrise_offset")) : nothing}
-        ${mode === "at_time"
-          ? html`<div class="number">
-              <span class="label">${t("settings.start_time")}</span>
-              <input
-                class="text"
-                type="time"
-                .value=${startTime.slice(0, 5)}
-                @change=${(event: Event) =>
-                  this.hass.callService("time", "set_value", {
-                    entity_id: e.start_time,
-                    time: `${(event.target as HTMLInputElement).value}:00`,
-                  })}
-              />
-            </div>`
-          : nothing}
-        <p class="muted small">${t("settings.schedule_hint")}</p>
-      </section>
+    const month = (entityId: string, label: TranslationKey) => html`
+      <div class="number">
+        <span class="label">${t(label)}</span>
+        <select
+          class="month"
+          @change=${(event: Event) =>
+            this.hass.callService("select", "select_option", {
+              entity_id: entityId,
+              option: (event.target as HTMLSelectElement).value,
+            })}
+        >
+          ${MONTHS.map(
+            (name, index) =>
+              html`<option value=${index + 1} ?selected=${this.hass.states[entityId]?.state === String(index + 1)}>
+                ${name}
+              </option>`,
+          )}
+        </select>
+      </div>
     `;
-  }
-
-  private renderLimits(): TemplateResult {
-    const t = this.localize;
-    const e = this.entry.entities;
     return html`
       <section class="card">
-        <h2>${t("settings.limits")}</h2>
-        ${numberControl(this.hass, e.soil_max, t("settings.soil_max"))}
+        <h2>${t("settings.season")}</h2>
+        ${month(e.season_start, "settings.season_start")} ${month(e.season_end, "settings.season_end")}
+        <p class="muted small">${t("settings.season_hint")}</p>
         ${numberControl(this.hass, e.rain_max, t("settings.rain_max"))}
+        ${numberControl(this.hass, e.frost_min, t("settings.frost_min"))}
         <p class="muted small">${t("settings.limits_hint")}</p>
       </section>
     `;
@@ -254,6 +237,10 @@ export class RainCastSettings extends LitElement {
       }
       a {
         color: var(--primary-color);
+      }
+      select.month {
+        width: auto;
+        min-width: 140px;
       }
       select {
         width: 100%;

@@ -7,7 +7,7 @@ interface Section {
   body: TemplateResult;
 }
 
-const PIPELINE = ["Daily start", "Interval", "Soil and rain", "Plan", "Valves one by one", "Measured time"];
+const PIPELINE = ["Zone start", "Interval", "Frost, soil, rain", "Plan", "Valves one by one", "Measured time"];
 
 const pipeline = (steps: string[]) =>
   html`<div class="pipeline">${steps.map((step) => html`<span class="chip">${step}</span>`)}</div>`;
@@ -18,16 +18,20 @@ const SECTIONS: Section[] = [
     title: "How RainCast works",
     body: html`
       <p>
-        Once a day, a number of hours before sunrise or at a fixed time, RainCast decides which zones need water and waters
-        them one valve after another. Only one valve runs at a time, so the water pressure stays the same for every zone.
+        Each zone starts once a day at its own time, a number of hours before sunrise or at a fixed time. RainCast then
+        decides whether the zone needs water and waters it one valve after another. Only one valve runs at a time, so the
+        water pressure stays the same for every zone: zones starting together run as one, and a start during a run waits
+        for it to end.
       </p>
       ${pipeline(PIPELINE)}
       <ol>
         <li><b>Interval.</b> A zone is due when its interval has passed since it was last watered, or when it was never watered.</li>
+        <li><b>Frost.</b> Below the frost limit no zone is watered, roofed or not.</li>
         <li>
-          <b>Weather.</b> A due zone open to the sky is held while the soil is wetter than the soil limit or more rain is
-          forecast than the rain limit. A zone under a roof is never held.
+          <b>Soil.</b> A due zone is held while its soil is wetter than its own soil limit, from its own sensor or, for a
+          zone open to the sky, the general one.
         </li>
+        <li><b>Rain.</b> A due zone open to the sky is held while more rain is forecast than the rain limit.</li>
         <li><b>Plan.</b> The due zones are sent as a notification at the start, the skipped ones with the reason.</li>
         <li>
           <b>Watering.</b> Each valve runs for its own time. Only the time the valve reports open counts; a zone counts as
@@ -56,13 +60,39 @@ const SECTIONS: Section[] = [
     `,
   },
   {
+    icon: "mdi:calendar-range",
+    title: "Season, frost and the main switch",
+    body: html`
+      <ul>
+        <li>
+          <b>Automatic watering</b> is the main switch of the daily starts. Off, no zone starts by itself and no plan is sent;
+          manual runs still work.
+        </li>
+        <li>
+          <b>Season.</b> Automatic starts happen only from the first to the last month of the season, so the system rests
+          over the winter by itself. A season may run over the new year.
+        </li>
+        <li>
+          <b>Frost.</b> With an outdoor temperature sensor set, no zone is watered by a start or by <i>Water due zones</i>
+          while it is below the frost limit, so water does not freeze in pipes and heads. A manual run of one zone is still
+          possible.
+        </li>
+      </ul>
+    `,
+  },
+  {
     icon: "mdi:weather-partly-rainy",
     title: "Weather inputs",
     body: html`
-      <p>Both inputs are optional and can be any sensor:</p>
+      <p>All inputs are optional and can be any sensor:</p>
       <ul>
-        <li><b>Soil moisture</b> in %, measured or a model value such as Open-Meteo's soil moisture at 3–9 cm.</li>
-        <li><b>Rain forecast</b> in mm for the coming day.</li>
+        <li>
+          <b>Soil moisture</b> in %, measured or a model value such as Open-Meteo's soil moisture at 3–9 cm. The general
+          sensor serves every zone open to the sky; any zone can have its own sensor or input number instead, for example a
+          greenhouse. The limit is set per zone.
+        </li>
+        <li><b>Rain forecast</b> in mm for the coming day, for zones open to the sky.</li>
+        <li><b>Outdoor temperature</b> for the frost hold.</li>
       </ul>
       <p>
         Without an input, zones are watered by their intervals alone. When a configured input has no value, RainCast waters

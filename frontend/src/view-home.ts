@@ -1,5 +1,14 @@
 import { LitElement, css, html, nothing, type TemplateResult } from "lit";
-import { type EntryInfo, type ZoneInfo, durationEntities, latestResult, pressButton, runZone } from "./api";
+import {
+  type EntryInfo,
+  type ZoneInfo,
+  durationEntities,
+  inSeason,
+  latestResult,
+  pressButton,
+  runZone,
+  zoneSoilSensor,
+} from "./api";
 import { type HomeAssistant, fireEvent, isOn, numberState } from "./ha";
 import { type Localize, type TranslationKey, dayLabel, formatNumber, timeLabel } from "./localize";
 import { controlStyles } from "./number-control";
@@ -9,6 +18,7 @@ const STATUS_CHIP: Record<string, string> = {
   watering: "water",
   due: "ok",
   waiting: "",
+  frost: "warn",
   wet_soil: "warn",
   rain_forecast: "warn",
   no_duration: "warn",
@@ -88,7 +98,7 @@ export class RainCastHome extends LitElement {
         <div class="headline">
           <ha-icon icon=${watering ? "mdi:sprinkler-variant" : "mdi:calendar-clock"}></ha-icon>
           <div class="grow">${watering ? this.renderRunning() : this.renderNext()}</div>
-          <span class="chip ${control ? "ok" : "warn"}">${t(control ? "home.control_on" : "home.dry_run")}</span>
+          ${this.renderModeChip(control)}
         </div>
         ${this.renderPlan()}
         ${this.error ? html`<div class="error">${this.error}</div>` : nothing}
@@ -110,6 +120,18 @@ export class RainCastHome extends LitElement {
     `;
   }
 
+  /** Why automatic watering would not run, or whether it waters for real. */
+  private renderModeChip(control: boolean): TemplateResult {
+    const t = this.localize;
+    const e = this.entry.entities;
+    if (!isOn(this.hass, e.automatic)) return html`<span class="chip warn">${t("home.automatic_off")}</span>`;
+    const first = numberState(this.hass, e.season_start);
+    const last = numberState(this.hass, e.season_end);
+    const outOfSeason = first !== undefined && last !== undefined && !inSeason(first, last);
+    if (outOfSeason) return html`<span class="chip warn">${t("home.out_of_season")}</span>`;
+    return html`<span class="chip ${control ? "ok" : "warn"}">${t(control ? "home.control_on" : "home.dry_run")}</span>`;
+  }
+
   private renderRunning(): TemplateResult {
     const t = this.localize;
     const attributes = this.hass.states[this.entry.entities.running]?.attributes ?? {};
@@ -126,7 +148,8 @@ export class RainCastHome extends LitElement {
     const next = this.hass.states[this.entry.entities.next_start]?.state;
     const date = next && !["unknown", "unavailable"].includes(next) ? new Date(next) : undefined;
     if (!date) {
-      return html`<div class="big">${t("home.no_start")}</div>
+      const off = !isOn(this.hass, this.entry.entities.automatic);
+      return html`<div class="big">${t(off ? "home.automatic_off_title" : "home.no_start")}</div>
         <div class="muted small">${t("home.no_start_hint")}</div>`;
     }
     return html`
@@ -160,23 +183,44 @@ export class RainCastHome extends LitElement {
     return html`
       <section class="card">
         <h2><ha-icon icon="mdi:weather-partly-rainy"></ha-icon>${t("home.weather")}</h2>
-        ${this.renderGauge(t("home.soil"), s.soil_sensor, e.soil_max, "%")}
         ${this.renderGauge(t("home.rain"), s.rain_sensor, e.rain_max, "mm")}
+        ${s.outdoor_sensor ? this.renderGauge(t("home.outdoor"), s.outdoor_sensor, e.frost_min, "°C", true) : nothing}
         <p class="muted small">${t("home.weather_hint")}</p>
       </section>
     `;
   }
 
-  /** Value against its limit; the bar is full at twice the limit. */
-  private renderGauge(label: string, sensor: string | null | undefined, limitEntity: string, unit: string): TemplateResult {
+  /**
+   * Value against its limit; the bar is full at twice the limit. With below, the value holds
+   * when it is under the limit (frost) and the bar is left out.
+   */
+  private renderGauge(
+    label: string,
+    sensor: string | null | undefined,
+    limitEntity: string,
+    unit: string,
+    below = false,
+  ): TemplateResult {
     const t = this.localize;
     if (!sensor) {
       return html`<div class="gauge"><span>${label}</span><span class="muted">${t("home.not_configured")}</span></div>`;
     }
     const value = numberState(this.hass, sensor);
     const limit = numberState(this.hass, limitEntity);
-    const over = value !== undefined && limit !== undefined && value > limit;
+    const known = value !== undefined && limit !== undefined;
+    const over = known && (below ? value < limit : value > limit);
     const share = value !== undefined && limit ? Math.min(value / (2 * limit), 1) : 0;
+    if (below) {
+      return html`
+        <div class="gauge">
+          <span>${label}</span>
+          <span class=${over ? "warn-text" : ""}>
+            ${value === undefined ? t("home.no_value") : `${formatNumber(value, 1)} ${unit}`}
+            <span class="muted small">/ ${t("home.frost_below", { limit: formatNumber(limit, 1) })}</span>
+          </span>
+        </div>
+      `;
+    }
     return html`
       <div class="gauge">
         <span>${label}</span>
@@ -224,9 +268,11 @@ export class RainCastHome extends LitElement {
           <dd>${this.dateText(last, status?.attributes.days_since)}</dd>
           <dt>${t("zone.next_due")}</dt>
           <dd>${this.dateText(next)}</dd>
+          <dt>${t("zone.next_start")}</dt>
+          <dd>${this.startText(zone)}</dd>
           <dt>${t("zone.interval")}</dt>
           <dd>${t("zone.every_days", { days: interval ?? "–" })}</dd>
-          ${this.renderWater(zone)}
+          ${this.renderSoil(zone)} ${this.renderWater(zone)}
         </dl>
         <div class="valves">
           ${zone.valves.map((valve, index) => {
@@ -262,6 +308,30 @@ export class RainCastHome extends LitElement {
         </div>
         ${manual ? this.renderManualActions(zone) : this.renderZoneActions(zone)}
       </section>
+    `;
+  }
+
+  private startText(zone: ZoneInfo): string {
+    const value = this.hass.states[zone.entities.next_start]?.state;
+    if (!value || ["unknown", "unavailable"].includes(value)) return this.localize("zone.no_start");
+    const date = new Date(value);
+    return `${dayLabel(date)}, ${timeLabel(date)}`;
+  }
+
+  /** Soil moisture the zone is judged on, against the zone's own limit. */
+  private renderSoil(zone: ZoneInfo): TemplateResult | typeof nothing {
+    const t = this.localize;
+    const sensor = zoneSoilSensor(this.entry, zone);
+    if (!sensor) return nothing;
+    const value = numberState(this.hass, sensor);
+    const limit = numberState(this.hass, zone.entities.soil_max);
+    const wet = value !== undefined && limit !== undefined && value > limit;
+    return html`
+      <dt>${t("zone.soil")}</dt>
+      <dd>
+        <span class=${wet ? "warn-text" : ""}>${value === undefined ? t("home.no_value") : `${formatNumber(value, 1)} %`}</span>
+        <span class="muted">/ ${formatNumber(limit, 0)} %</span>
+      </dd>
     `;
   }
 
@@ -308,7 +378,7 @@ export class RainCastHome extends LitElement {
           ?disabled=${!control || watering || !anyTime}
           @click=${() => this.startManual(zone)}
         >
-          <ha-icon icon="mdi:play"></ha-icon> ${t("zone.start")}
+          <ha-icon icon="mdi:play"></ha-icon> ${t("zone.run_start")}
         </button>
       </div>
     `;

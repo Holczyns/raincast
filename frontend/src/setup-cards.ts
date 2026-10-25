@@ -29,12 +29,15 @@ const SOURCE_GROUPS: { title: TranslationKey; fields: SourceField[] }[] = [
     fields: [
       { key: "soil_sensor", label: "src.soil_sensor", domains: ["sensor", "input_number"] },
       { key: "rain_sensor", label: "src.rain_sensor", domains: ["sensor", "input_number"] },
+      { key: "outdoor_sensor", label: "src.outdoor_sensor", domains: ["sensor"], deviceClass: "temperature" },
     ],
   },
   { title: "src.water", fields: [{ key: "water_meter", label: "src.water_meter", domains: ["sensor"], deviceClass: "water" }] },
 ];
 const SOURCE_FIELDS = SOURCE_GROUPS.flatMap((group) => group.fields);
 const VALVE_DOMAINS = ["valve", "switch", "input_boolean"];
+const SOIL_DOMAINS = ["sensor", "input_number"];
+const START_MODES = ["before_sunrise", "at_time", "off"];
 const NEW_ZONE_INTERVAL = 3;
 const NEW_ZONE_DURATION = 15;
 
@@ -111,10 +114,11 @@ export class RainCastSourcesCard extends LitElement {
           ${group.fields.map((field) => this.renderEntity(t(field.label), this.entry.sources[field.key]))}
         `,
       )}
-      <h3>${t("src.valves")}</h3>
+      <h3>${t("src.zones")}</h3>
       ${this.entry.zones.map(
         (zone) => html`
           <div class="zone-name">${zone.name}</div>
+          ${zone.soil_sensor ? this.renderEntity(friendly(this.hass, zone.soil_sensor), zone.soil_sensor, t("src.zone_soil")) : nothing}
           ${zone.valves.map((valve) =>
             this.renderEntity(
               friendly(this.hass, valve),
@@ -262,7 +266,12 @@ export class RainCastZonesCard extends LitElement {
 
   private startEdit(zone?: ZoneInfo): void {
     this.editing = zone?.id ?? "new";
-    this.draft = { name: zone?.name ?? "", valves: [...(zone?.valves ?? [])], roofed: zone?.roofed ?? false };
+    this.draft = {
+      name: zone?.name ?? "",
+      valves: [...(zone?.valves ?? [])],
+      roofed: zone?.roofed ?? false,
+      soil_sensor: zone?.soil_sensor ?? null,
+    };
     this.confirmRemove = false;
     this.error = undefined;
   }
@@ -324,7 +333,8 @@ export class RainCastZonesCard extends LitElement {
             <ha-icon icon="mdi:pencil"></ha-icon>
           </button>
         </div>
-        ${numberControl(this.hass, zone.entities.interval, t("zone.interval"))}
+        ${this.renderStart(zone)} ${numberControl(this.hass, zone.entities.interval, t("zone.interval"))}
+        ${numberControl(this.hass, zone.entities.soil_max, t("zone.soil_max"))}
         ${zone.valves.map(
           (valve, index) => html`
             <div class="valve-tuning">
@@ -335,6 +345,47 @@ export class RainCastZonesCard extends LitElement {
           `,
         )}
       </div>
+    `;
+  }
+
+  /** Start mode of the zone, with the time or the offset it needs. */
+  private renderStart(zone: ZoneInfo): TemplateResult {
+    const t = this.localize;
+    const mode = this.hass.states[zone.entities.start_mode]?.state;
+    const startTime = this.hass.states[zone.entities.start_time]?.state ?? "";
+    return html`
+      <div class="number">
+        <span class="label">${t("zone.start")}</span>
+        <select
+          class="start"
+          @change=${(event: Event) =>
+            this.hass.callService("select", "select_option", {
+              entity_id: zone.entities.start_mode,
+              option: (event.target as HTMLSelectElement).value,
+            })}
+        >
+          ${START_MODES.map(
+            (option) =>
+              html`<option value=${option} ?selected=${option === mode}>${t(`mode.${option}` as TranslationKey)}</option>`,
+          )}
+        </select>
+      </div>
+      ${mode === "before_sunrise" ? numberControl(this.hass, zone.entities.sunrise_offset, t("zone.sunrise_offset")) : nothing}
+      ${mode === "at_time"
+        ? html`<div class="number">
+            <span class="label">${t("zone.start_time")}</span>
+            <input
+              class="text"
+              type="time"
+              .value=${startTime.slice(0, 5)}
+              @change=${(event: Event) =>
+                this.hass.callService("time", "set_value", {
+                  entity_id: zone.entities.start_time,
+                  time: `${(event.target as HTMLInputElement).value}:00`,
+                })}
+            />
+          </div>`
+        : nothing}
     `;
   }
 
@@ -374,6 +425,17 @@ export class RainCastZonesCard extends LitElement {
           />
           <span>${t("zone.roofed")}<br /><span class="muted small">${t("zone.roofed_hint")}</span></span>
         </label>
+        <div class="field">
+          <label>${t("zone.soil_sensor")}</label>
+          <raincast-entity-picker
+            .hass=${this.hass}
+            .domains=${SOIL_DOMAINS}
+            .value=${draft.soil_sensor}
+            optional
+            @value-changed=${(event: CustomEvent) => (this.draft = { ...draft, soil_sensor: event.detail })}
+          ></raincast-entity-picker>
+          <span class="muted small">${t("zone.soil_sensor_hint")}</span>
+        </div>
         <div class="field">
           <label>${t("zone.valves")} *</label>
           ${draft.valves.map(
@@ -437,6 +499,14 @@ export class RainCastZonesCard extends LitElement {
       .zone-block {
         border-bottom: 1px solid var(--divider-color);
         padding: 6px 0 8px;
+      }
+      select.start {
+        padding: 4px 6px;
+        border: 1px solid var(--divider-color);
+        border-radius: 6px;
+        background: var(--card-background-color, transparent);
+        color: var(--primary-text-color);
+        font: inherit;
       }
       .valve-tuning {
         padding-left: 30px;

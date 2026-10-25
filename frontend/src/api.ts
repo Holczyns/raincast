@@ -5,6 +5,8 @@ export interface ZoneInfo {
   name: string;
   valves: string[];
   roofed: boolean;
+  /** The zone's own soil sensor; null when it uses the general one or none. */
+  soil_sensor: string | null;
   entities: Record<string, string>;
 }
 
@@ -12,6 +14,7 @@ export interface ZoneFields {
   name: string;
   valves: string[];
   roofed: boolean;
+  soil_sensor: string | null;
 }
 
 export interface ValveResult {
@@ -95,6 +98,18 @@ export function durationEntities(zone: ZoneInfo): (string | undefined)[] {
 /** Flow limit entities of a zone, in the order of its valves; only with a water meter. */
 export function maxFlowEntities(zone: ZoneInfo): (string | undefined)[] {
   return zone.valves.map((_valve, index) => zone.entities[`max_flow_${index}`]);
+}
+
+/** Sensor a zone is judged on: its own, or the general one for a zone open to the sky. */
+export function zoneSoilSensor(entry: EntryInfo, zone: ZoneInfo): string | null {
+  if (zone.soil_sensor) return zone.soil_sensor;
+  return zone.roofed ? null : (entry.sources.soil_sensor ?? null);
+}
+
+/** Whether automatic watering is in season today, from the controller's season months. */
+export function inSeason(first: number, last: number, today = new Date()): boolean {
+  const month = today.getMonth() + 1;
+  return first <= last ? month >= first && month <= last : month >= first || month <= last;
 }
 
 /** The zone's result in its latest run, from the log (newest first). */
