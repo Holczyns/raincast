@@ -47,6 +47,7 @@ from .const import (
     CHECK_SECONDS,
     CONF_DURATION,
     CONF_INTERVAL,
+    CONF_MOWER,
     CONF_OUTDOOR_SENSOR,
     CONF_RAIN_SENSOR,
     CONF_ROOFED,
@@ -58,8 +59,10 @@ from .const import (
     DEFAULT_SETTINGS,
     DEFAULT_ZONE_SETTINGS,
     DOMAIN,
+    FORECAST_MINUTES,
     METER_SETTLE_SECONDS,
     METER_STALE_SECONDS,
+    MOWER_SETTINGS,
     NATIVE_START,
     POLL_SECONDS,
     RUN_LOG_SIZE,
@@ -99,6 +102,7 @@ from .engine import (
     zone_watered,
 )
 from .messages import async_notify, plan_message, run_message
+from .mowing import Mowing
 from .problems import async_clear_issues, async_report
 
 _LOGGER = logging.getLogger(__name__)
@@ -154,6 +158,7 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
         self._waiting: list[list[str]] = []
         self.run: RunState | None = None
         self.faults = FaultMonitor()
+        self.mowing = Mowing(self)
         self._run_task: asyncio.Task[None] | None = None
         self._start_unsub: CALLBACK_TYPE | None = None
         self._unsub: list[CALLBACK_TYPE] = []
@@ -244,15 +249,29 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
                 self.hass, self._async_close_interrupted(interrupted), name=f"{DOMAIN} close interrupted run"
             )
 
+        last_rain = stored.get("last_rain")
+        self.mowing.last_rain = dt_util.parse_datetime(last_rain) if last_rain else None
+        # The weather integration may still be starting; do not hold up Home Assistant for it.
+        self.entry.async_create_background_task(
+            self.hass, self.mowing.async_refresh_forecast(), name=f"{DOMAIN} first forecast"
+        )
+
         self.async_set_updated_data(self._plan())
         self._schedule_start()
+        self.mowing.schedule()
         self._unsub.append(async_track_time_interval(self.hass, self._async_check, timedelta(seconds=CHECK_SECONDS)))
+        self._unsub.append(
+            async_track_time_interval(
+                self.hass, self.mowing.async_refresh_forecast, timedelta(minutes=FORECAST_MINUTES)
+            )
+        )
 
     async def async_shutdown(self) -> None:
         for unsub in self._unsub:
             unsub()
         self._unsub.clear()
         self._cancel_start()
+        await self.mowing.async_shutdown()
         if self._run_task is not None:
             self._run_task.cancel()
         await self._async_save()
@@ -262,7 +281,7 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
         await self._store.async_save(self._save_data())
 
     @callback
-    def _schedule_save(self) -> None:
+    def async_schedule_save(self) -> None:
         self._store.async_delay_save(self._save_data, 10)
 
     def _save_data(self) -> dict[str, Any]:
@@ -282,6 +301,7 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
             },
             "last_watered": {key: value.isoformat() for key, value in self.last_watered.items() if value},
             "water_totals": dict(self.water_totals),
+            "last_rain": self.mowing.last_rain.isoformat() if self.mowing.last_rain else None,
             "active_run": active_run,
             "log": self.log[-RUN_LOG_SIZE:],
         }
@@ -330,13 +350,15 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
     def async_refresh_plan(self) -> None:
         """Compute the plan again after a setting or a date changed."""
         self.async_set_updated_data(self._plan())
-        self._schedule_save()
+        self.async_schedule_save()
 
     # Schedule
 
-    def _sunrise_after(self, moment: datetime) -> datetime:
-        sunrise = get_astral_event_next(self.hass, "sunrise", dt_util.as_utc(moment))
-        return dt_util.as_local(sunrise)
+    def sunrise_after(self, moment: datetime) -> datetime:
+        return dt_util.as_local(get_astral_event_next(self.hass, "sunrise", dt_util.as_utc(moment)))
+
+    def sunset_after(self, moment: datetime) -> datetime:
+        return dt_util.as_local(get_astral_event_next(self.hass, "sunset", dt_util.as_utc(moment)))
 
     def _zone_start(self, zone_key: str, now: datetime) -> datetime | None:
         """Next start of the zone that falls in the season."""
@@ -348,7 +370,8 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
             start = next_start(
                 StartMode(tuning[SETTING_START_MODE]),
                 moment,
-                sunrise_after=self._sunrise_after,
+                sunrise_after=self.sunrise_after,
+                sunset_after=self.sunset_after,
                 offset_h=float(tuning[SETTING_SUNRISE_OFFSET]),
                 at=time.fromisoformat(str(tuning[SETTING_START_TIME])),
             )
@@ -691,7 +714,12 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
     def _names(self, entity_ids: tuple[str, ...]) -> str:
         return ", ".join(self._friendly_name(entity_id) for entity_id in entity_ids) or "none"
 
+    async def async_check_now(self) -> None:
+        await self._async_check(dt_util.now())
+
     async def _async_check(self, now: datetime) -> None:
+        self.mowing.track_rain(now)
+        self.mowing.track_dock()
         self.async_set_updated_data(self._plan())
         # A valve left open counts as fixed once it reports closed.
         self._left_open = {valve for valve in self._left_open if self._is_open(valve)}
@@ -714,6 +742,7 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
             no_flow=tuple(sorted(self._no_flow)),
             flow_high=tuple(sorted(self._flow_high)),
             weather_missing=weather_missing,
+            mower_not_back=(self.entry.data[CONF_MOWER],) if self.mowing.not_back else (),
         )
         raised, cleared = self.faults.update(conditions(fault_inputs), now)
         if not (raised or cleared):
@@ -725,6 +754,7 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
             "no_flow": self._names(fault_inputs.no_flow),
             "flow_high": self._names(fault_inputs.flow_high),
             "weather": self._names(fault_inputs.weather_missing),
+            "mower": self._names(fault_inputs.mower_not_back),
         }
         await async_report(self.hass, self.entry, raised, cleared, values)
 
@@ -732,7 +762,7 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
 
     async def async_set_control(self, active: bool) -> None:
         self.control_active = active
-        self._schedule_save()
+        self.async_schedule_save()
         # Turning control off ends a run in progress, closes its valve and drops waiting starts.
         if not active:
             self._waiting.clear()
@@ -743,8 +773,10 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
     @callback
     def async_set_setting(self, key: str, value: Any) -> None:
         self.settings[key] = value
-        # The automatic switch and the season decide which starts are tracked.
+        # The automatic switches and the seasons decide which starts are tracked.
         self._schedule_start()
+        if key in MOWER_SETTINGS:
+            self.mowing.schedule()
         self.async_refresh_plan()
 
     @callback
@@ -767,7 +799,7 @@ class RainCastCoordinator(DataUpdateCoordinator[Plan]):
     @callback
     def async_set_max_flow(self, zone_key: str, valve: str, flow: float) -> None:
         self.zone_tuning[zone_key]["max_flows"][valve] = flow
-        self._schedule_save()
+        self.async_schedule_save()
         self.async_update_listeners()
 
     @callback

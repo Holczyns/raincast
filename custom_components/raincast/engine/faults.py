@@ -20,6 +20,7 @@ class Fault(StrEnum):
     NO_FLOW = "no_flow"
     FLOW_HIGH = "flow_high"
     WEATHER_LOST = "weather_lost"
+    MOWER_NOT_BACK = "mower_not_back"
 
 
 DELAYS: dict[Fault, timedelta] = {
@@ -29,6 +30,7 @@ DELAYS: dict[Fault, timedelta] = {
     Fault.NO_FLOW: timedelta(0),
     Fault.FLOW_HIGH: timedelta(0),
     Fault.WEATHER_LOST: timedelta(minutes=60),
+    Fault.MOWER_NOT_BACK: timedelta(0),
 }
 
 
@@ -46,6 +48,8 @@ class FaultInputs:
     """Valves stopped for too much flow in their latest run."""
     weather_missing: tuple[str, ...]
     """Configured weather sensors without a value right now."""
+    mower_not_back: tuple[str, ...] = ()
+    """The mower, while it has not come back to its dock after a mowing."""
 
 
 def conditions(inputs: FaultInputs) -> set[Fault]:
@@ -68,6 +72,9 @@ def conditions(inputs: FaultInputs) -> set[Fault]:
     # 6. Watering continues without the weather hold.
     if inputs.weather_missing:
         found.add(Fault.WEATHER_LOST)
+    # 7. The mower is out longer than a mowing takes.
+    if inputs.mower_not_back:
+        found.add(Fault.MOWER_NOT_BACK)
     return found
 
 

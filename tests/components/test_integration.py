@@ -5,7 +5,7 @@ from datetime import timedelta
 
 import pytest
 from homeassistant import config_entries
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, SupportsResponse
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import issue_registry as ir
@@ -41,14 +41,18 @@ def notifications(hass: HomeAssistant):
 
 
 async def run_wizard(
-    hass: HomeAssistant, valves=(VALVE_1, VALVE_2), meter: str | None = None, duration: float = 1
+    hass: HomeAssistant,
+    valves=(VALVE_1, VALVE_2),
+    meter: str | None = None,
+    duration: float = 1,
+    extra: dict | None = None,
 ) -> config_entries.ConfigEntry:
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
     assert result["type"] is FlowResultType.FORM
     result = await hass.config_entries.flow.async_configure(result["flow_id"], {"name": "Garden"})
     assert result["step_id"] == "weather"
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {"rain_sensor": RAIN, **({"water_meter": meter} if meter else {})}
+        result["flow_id"], {"rain_sensor": RAIN, **({"water_meter": meter} if meter else {}), **(extra or {})}
     )
     assert result["step_id"] == "zone"
     result = await hass.config_entries.flow.async_configure(
@@ -57,6 +61,7 @@ async def run_wizard(
             "name": "Lawn",
             "valves": list(valves),
             "roofed": False,
+            "mower_conflict": True,
             "soil_sensor": SOIL,
             "interval": 3,
             "duration": duration,
@@ -69,6 +74,14 @@ async def run_wizard(
     entry = hass.config_entries.async_entries(DOMAIN)[0]
     hass.config_entries.async_update_entry(entry, options={"notify_service": "phone"})
     await hass.async_block_till_done()
+    # Tests run on any date, so the watering season covers the whole year.
+    for key, month in (("_season_start", "1"), ("_season_end", "12")):
+        await hass.services.async_call(
+            "select",
+            "select_option",
+            {"entity_id": entity_id(hass, "select", f"{entry.entry_id}{key}"), "option": month},
+            blocking=True,
+        )
     return entry
 
 
@@ -561,3 +574,88 @@ async def test_start_during_a_run_waits_for_it(hass: HomeAssistant, garden, noti
     await advance(hass, freezer, 150)
     assert entry.runtime_data.run is not None
     assert entry.runtime_data.run.reason == "scheduled"
+
+
+MOWER = "lawn_mower.mower"
+WEATHER = "weather.home"
+
+
+@pytest.fixture
+async def mower(hass: HomeAssistant):
+    """A docked mower and dry weather; the forecast and the mower's start are mocked."""
+    hass.states.async_set(MOWER, "docked")
+    hass.states.async_set(WEATHER, "sunny")
+    starts = async_mock_service(hass, "lawn_mower", "start_mowing")
+    forecast = {"forecast": []}
+    async_mock_service(
+        hass, "weather", "get_forecasts", response={WEATHER: forecast}, supports_response=SupportsResponse.ONLY
+    )
+    return starts, forecast
+
+
+async def mower_wizard(hass: HomeAssistant):
+    return await run_wizard(hass, extra={"weather": WEATHER, "mower": MOWER})
+
+
+async def test_watered_lawn_holds_the_mower_and_mow_now_overrides(hass: HomeAssistant, garden, mower) -> None:
+    starts, _forecast = mower
+    entry = await mower_wizard(hass)
+    status = entity_id(hass, "sensor", f"{entry.entry_id}_mowing")
+    assert hass.states.get(status).state == "ready"
+    await hass.services.async_call(
+        "date",
+        "set_value",
+        {"entity_id": entity_id(hass, "date", "_last_watered"), "date": dt_util.now().date().isoformat()},
+        blocking=True,
+    )
+    assert hass.states.get(status).state == "watered"
+    await hass.services.async_call(
+        "button", "press", {"entity_id": entity_id(hass, "button", "_mow_now")}, blocking=True
+    )
+    assert len(starts) == 1
+    assert hass.states.get(status).state == "mowing"
+
+
+async def test_rain_now_and_ahead_hold_the_mower(hass: HomeAssistant, garden, mower) -> None:
+    _starts, forecast = mower
+    entry = await mower_wizard(hass)
+    status = entity_id(hass, "sensor", f"{entry.entry_id}_mowing")
+    hass.states.async_set(WEATHER, "rainy")
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
+    await hass.async_block_till_done()
+    assert hass.states.get(status).state == "raining"
+    assert float(hass.states.get(entity_id(hass, "sensor", "_hours_since_rain")).state) == 0.0
+    hass.states.async_set(WEATHER, "sunny")
+    entry.runtime_data.mowing.last_rain = dt_util.now() - timedelta(hours=20)
+    forecast["forecast"] = [{"datetime": (dt_util.now() + timedelta(hours=1)).isoformat(), "precipitation": 0.6}]
+    await entry.runtime_data.mowing.async_refresh_forecast()
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=2))
+    await hass.async_block_till_done()
+    assert hass.states.get(status).state == "rain_ahead"
+
+
+async def test_mower_goes_out_at_its_start(hass: HomeAssistant, garden, mower, notifications, freezer) -> None:
+    starts, _forecast = mower
+    entry = await mower_wizard(hass)
+    start = (dt_util.now() + timedelta(minutes=2)).replace(second=0, microsecond=0)
+    for key, value in (("_mower_season_start", "1"), ("_mower_season_end", "12"), ("_mower_start_mode", "at_time")):
+        await hass.services.async_call(
+            "select",
+            "select_option",
+            {"entity_id": entity_id(hass, "select", f"{entry.entry_id}{key}"), "option": value},
+            blocking=True,
+        )
+    await hass.services.async_call(
+        "time",
+        "set_value",
+        {"entity_id": entity_id(hass, "time", "_mower_start_time"), "time": start.strftime("%H:%M:%S")},
+        blocking=True,
+    )
+    await hass.services.async_call(
+        "switch", "turn_on", {"entity_id": entity_id(hass, "switch", "_automatic_mowing")}, blocking=True
+    )
+    freezer.move_to(start + timedelta(seconds=1))
+    async_fire_time_changed(hass, start + timedelta(seconds=1))
+    await hass.async_block_till_done()
+    assert len(starts) == 1
+    assert notifications[-1].data["title"] == "Garden: mowing"

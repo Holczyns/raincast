@@ -1,4 +1,4 @@
-"""Valve control and automatic watering on/off."""
+"""Valve control, automatic watering and automatic mowing on/off."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import RainCastConfigEntry
-from .const import SETTING_AUTOMATIC
+from .const import CONF_MOWER, SETTING_AUTOMATIC, SETTING_AUTOMATIC_MOWING
 from .entity import RainCastEntity
 
 
@@ -19,7 +19,13 @@ async def async_setup_entry(
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     coordinator = entry.runtime_data
-    async_add_entities([ControlSwitch(coordinator, "control"), AutomaticSwitch(coordinator, SETTING_AUTOMATIC)])
+    switches: list[SwitchEntity] = [
+        ControlSwitch(coordinator, "control"),
+        SettingSwitch(coordinator, SETTING_AUTOMATIC),
+    ]
+    if entry.data.get(CONF_MOWER):
+        switches.append(SettingSwitch(coordinator, SETTING_AUTOMATIC_MOWING))
+    async_add_entities(switches)
 
 
 class ControlSwitch(RainCastEntity, SwitchEntity):
@@ -36,15 +42,19 @@ class ControlSwitch(RainCastEntity, SwitchEntity):
         await self.coordinator.async_set_control(False)
 
 
-class AutomaticSwitch(RainCastEntity, SwitchEntity):
-    """Main switch of the daily starts; off, only manual runs water."""
+class SettingSwitch(RainCastEntity, SwitchEntity):
+    """Main switch of the daily starts of the zones, or of the mower; manual runs work regardless."""
+
+    def __init__(self, coordinator, key: str) -> None:
+        super().__init__(coordinator, key)
+        self._key = key
 
     @property
     def is_on(self) -> bool:
-        return bool(self.coordinator.settings[SETTING_AUTOMATIC])
+        return bool(self.coordinator.settings[self._key])
 
     async def async_turn_on(self, **kwargs: Any) -> None:
-        self.coordinator.async_set_setting(SETTING_AUTOMATIC, True)
+        self.coordinator.async_set_setting(self._key, True)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
-        self.coordinator.async_set_setting(SETTING_AUTOMATIC, False)
+        self.coordinator.async_set_setting(self._key, False)

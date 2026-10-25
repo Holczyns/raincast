@@ -12,7 +12,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 
 from .const import CONF_NOTIFY_SERVICE
-from .engine import Plan, ZonePlan, ZoneStatus
+from .engine import MowHold, Plan, ZonePlan, ZoneStatus
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -92,6 +92,20 @@ def run_message(name: str, entry: dict[str, Any], friendly_name: Callable[[str],
     if entry["interrupted"]:
         lines.append("Stopped before the end.")
     return title, "\n".join(lines)
+
+
+def mow_skipped_message(
+    name: str, hold: MowHold, hours_since_rain: float | None, hours_to_rain: float | None
+) -> tuple[str, str]:
+    reasons = {
+        MowHold.FROST: "frost",
+        MowHold.WATERING: "a zone on the lawn is being watered",
+        MowHold.WATERED: "the lawn was watered today; wet grass sticks to the blades",
+        MowHold.RAINING: "it is raining",
+        MowHold.RAINED: f"it rained {hours_since_rain:g} h ago" if hours_since_rain is not None else "it rained",
+        MowHold.RAIN_AHEAD: f"rain is due in {hours_to_rain:g} h" if hours_to_rain is not None else "rain is due",
+    }
+    return f"{name}: mowing skipped", f"Mowing skipped: {reasons[hold]}."
 
 
 async def async_notify(hass: HomeAssistant, entry: ConfigEntry, title: str, message: str) -> None:

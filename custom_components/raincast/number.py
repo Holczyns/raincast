@@ -20,10 +20,14 @@ from . import RainCastConfigEntry
 from .const import (
     CONF_INTERVAL,
     CONF_MAX_FLOW,
+    CONF_MOWER,
     CONF_OUTDOOR_SENSOR,
     CONF_VALVES,
     CONF_WATER_METER,
+    SETTING_DRY_HOURS,
     SETTING_FROST_MIN,
+    SETTING_MOWER_OFFSET,
+    SETTING_RAIN_AHEAD_HOURS,
     SETTING_RAIN_MAX,
     SETTING_SOIL_MAX,
     SETTING_SUNRISE_OFFSET,
@@ -48,6 +52,11 @@ def _number(key: str, minimum: float, maximum: float, step: float, unit: str | N
 
 RAIN_MAX = _number(SETTING_RAIN_MAX, 0, 50, 0.5, UnitOfLength.MILLIMETERS)
 FROST_MIN = _number(SETTING_FROST_MIN, -10, 15, 0.5, UnitOfTemperature.CELSIUS)
+MOWER_SETTINGS: tuple[NumberEntityDescription, ...] = (
+    _number(SETTING_MOWER_OFFSET, -12, 12, 0.25, UnitOfTime.HOURS),
+    _number(SETTING_DRY_HOURS, 0, 72, 1, UnitOfTime.HOURS),
+    _number(SETTING_RAIN_AHEAD_HOURS, 0, 24, 0.5, UnitOfTime.HOURS),
+)
 ZONE_SETTINGS: tuple[NumberEntityDescription, ...] = (
     _number(SETTING_SUNRISE_OFFSET, 0, 6, 0.25, UnitOfTime.HOURS),
     _number(SETTING_SOIL_MAX, 0, 100, 1, PERCENTAGE),
@@ -83,6 +92,8 @@ async def async_setup_entry(
     # The frost limit needs an outdoor sensor to be checked against.
     if entry.data.get(CONF_OUTDOOR_SENSOR):
         controller.append(SettingNumber(coordinator, FROST_MIN))
+    if entry.data.get(CONF_MOWER):
+        controller += [SettingNumber(coordinator, description) for description in MOWER_SETTINGS]
     async_add_entities(controller)
     for zone in coordinator.zones.values():
         entities: list[NumberEntity] = [IntervalNumber(coordinator, zone, INTERVAL)]

@@ -31,6 +31,8 @@ from homeassistant.helpers.selector import (
 from .const import (
     CONF_DURATION,
     CONF_INTERVAL,
+    CONF_MOWER,
+    CONF_MOWER_CONFLICT,
     CONF_NOTIFY_SERVICE,
     CONF_OUTDOOR_SENSOR,
     CONF_RAIN_SENSOR,
@@ -38,6 +40,7 @@ from .const import (
     CONF_SOIL_SENSOR,
     CONF_VALVES,
     CONF_WATER_METER,
+    CONF_WEATHER,
     DEFAULT_DURATION,
     DEFAULT_INTERVAL,
     DEFAULT_NAME,
@@ -47,7 +50,7 @@ from .const import (
 from .problems import notify_services
 
 VALVE_DOMAINS = ["valve", "switch", "input_boolean"]
-WEATHER_KEYS = (CONF_RAIN_SENSOR, CONF_OUTDOOR_SENSOR, CONF_WATER_METER)
+WEATHER_KEYS = (CONF_RAIN_SENSOR, CONF_OUTDOOR_SENSOR, CONF_WEATHER, CONF_WATER_METER, CONF_MOWER)
 
 
 def _number(minimum: float, maximum: float, step: float, unit: str) -> NumberSelector:
@@ -72,7 +75,9 @@ def weather_schema(defaults: dict[str, Any]) -> probatio.Schema:
         {
             _optional(CONF_RAIN_SENSOR, defaults): sensor,
             _optional(CONF_OUTDOOR_SENSOR, defaults): temperature,
+            _optional(CONF_WEATHER, defaults): EntitySelector(EntitySelectorConfig(filter={"domain": "weather"})),
             _optional(CONF_WATER_METER, defaults): meter,
+            _optional(CONF_MOWER, defaults): EntitySelector(EntitySelectorConfig(filter={"domain": "lawn_mower"})),
         }
     )
 
@@ -84,6 +89,7 @@ def zone_schema(defaults: dict[str, Any], with_tuning: bool) -> probatio.Schema:
             EntitySelectorConfig(filter={"domain": VALVE_DOMAINS}, multiple=True)
         ),
         probatio.Required(CONF_ROOFED, default=defaults.get(CONF_ROOFED, False)): bool,
+        probatio.Required(CONF_MOWER_CONFLICT, default=defaults.get(CONF_MOWER_CONFLICT, False)): bool,
         _optional(CONF_SOIL_SENSOR, defaults): EntitySelector(
             EntitySelectorConfig(filter={"domain": ["sensor", "input_number"]})
         ),

@@ -10,7 +10,19 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.typing import ConfigType
 
-from .const import CONF_OUTDOOR_SENSOR, CONF_ROOFED, CONF_SOIL_SENSOR, CONF_WATER_METER, DOMAIN
+from .const import (
+    CONF_MOWER,
+    CONF_OUTDOOR_SENSOR,
+    CONF_ROOFED,
+    CONF_SOIL_SENSOR,
+    CONF_WATER_METER,
+    CONF_WEATHER,
+    DOMAIN,
+    MOWER_SETTINGS,
+    SETTING_DRY_HOURS,
+    SETTING_MOWER_OFFSET,
+    SETTING_RAIN_AHEAD_HOURS,
+)
 from .coordinator import RainCastCoordinator
 from .entity import controller_device_info
 from .frontend import async_register_frontend
@@ -86,6 +98,11 @@ def _remove_stale_entities(hass: HomeAssistant, entry: RainCastConfigEntry) -> N
     stale = {f"{entry.entry_id}_{key}" for key in ("start_mode", "start_time", "sunrise_offset", "soil_max")}
     if not entry.data.get(CONF_OUTDOOR_SENSOR):
         stale.add(f"{entry.entry_id}_frost_min")
+    if not entry.data.get(CONF_WEATHER):
+        stale |= {f"{entry.entry_id}_{key}" for key in ("raining", "hours_since_rain", "hours_to_rain")}
+    if not entry.data.get(CONF_MOWER):
+        mower_keys = (*MOWER_SETTINGS, SETTING_MOWER_OFFSET, SETTING_DRY_HOURS, SETTING_RAIN_AHEAD_HOURS)
+        stale |= {f"{entry.entry_id}_{key}" for key in (*mower_keys, "mow_now", "next_mowing", "mowing")}
     metered = bool(entry.data.get(CONF_WATER_METER))
     registry = er.async_get(hass)
     for entity in er.async_entries_for_config_entry(registry, entry.entry_id):

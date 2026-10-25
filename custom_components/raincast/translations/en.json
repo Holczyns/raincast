@@ -15,17 +15,21 @@
         }
       },
       "weather": {
-        "title": "Weather and water",
+        "title": "Weather, water and mower",
         "description": "All inputs are optional. Without the rain forecast or the outdoor temperature, or while they have no value, they hold nothing. Soil moisture is set per zone.",
         "data": {
           "rain_sensor": "Rain forecast",
           "water_meter": "Water meter",
-          "outdoor_sensor": "Outdoor temperature"
+          "outdoor_sensor": "Outdoor temperature",
+          "weather": "Weather forecast",
+          "mower": "Lawn mower"
         },
         "data_description": {
           "rain_sensor": "Sensor in mm for the coming day. Zones open to the sky are held while it is above the rain limit.",
           "water_meter": "Total water sensor, in m³ or L. RainCast meters every valve run, finds valves open without water and closes a valve whose flow is above its limit. A meter shared with the house also counts water used there meanwhile.",
-          "outdoor_sensor": "No zone is watered while it is below the frost limit, so water does not freeze in pipes and heads."
+          "outdoor_sensor": "No zone is watered while it is below the frost limit, so water does not freeze in pipes and heads.",
+          "weather": "Weather entity with an hourly forecast, such as Met.no. RainCast follows rain falling now, the time since the last rain and the next rain in the forecast; the mower waits for a dry lawn.",
+          "mower": "Lawn mower RainCast sends out at its own start, when no zone that blocks mowing was watered today and the grass is dry."
         }
       },
       "zone": {
@@ -37,14 +41,16 @@
           "roofed": "Under a roof",
           "interval": "Water every",
           "duration": "Time per valve",
-          "soil_sensor": "Soil moisture of this zone"
+          "soil_sensor": "Soil moisture of this zone",
+          "mower_conflict": "Blocks mowing"
         },
         "data_description": {
           "valves": "Valve, switch or input boolean entities, in the order they run.",
           "roofed": "A greenhouse or a covered bed does not get rain, so the rain forecast does not hold it.",
           "interval": "Days between waterings.",
           "duration": "Starting value for every valve of the zone.",
-          "soil_sensor": "Optional, sensor or input number in %. A zone without one does not look at the soil. The limit is set per zone."
+          "soil_sensor": "Optional, sensor or input number in %. A zone without one does not look at the soil. The limit is set per zone.",
+          "mower_conflict": "Watering this zone today keeps the mower in, for zones on the mowed lawn."
         }
       },
       "zones": {
@@ -56,12 +62,14 @@
         }
       },
       "reconfigure": {
-        "title": "Weather and water",
+        "title": "Weather, water and mower",
         "description": "Change the weather inputs and the water meter. Limits and start times are changed on the device page.",
         "data": {
           "rain_sensor": "Rain forecast",
           "water_meter": "Water meter",
-          "outdoor_sensor": "Outdoor temperature"
+          "outdoor_sensor": "Outdoor temperature",
+          "weather": "Weather forecast",
+          "mower": "Lawn mower"
         }
       }
     }
@@ -89,14 +97,16 @@
             "roofed": "Under a roof",
             "interval": "Water every",
             "duration": "Time per valve",
-            "soil_sensor": "Soil moisture of this zone"
+            "soil_sensor": "Soil moisture of this zone",
+            "mower_conflict": "Blocks mowing"
           },
           "data_description": {
             "valves": "Valve, switch or input boolean entities, in the order they run.",
             "roofed": "A greenhouse or a covered bed does not get rain, so the rain forecast does not hold it.",
             "interval": "Days between waterings.",
             "duration": "Starting value for every valve of the zone.",
-            "soil_sensor": "Optional, sensor or input number in %. A zone without one does not look at the soil. The limit is set per zone."
+            "soil_sensor": "Optional, sensor or input number in %. A zone without one does not look at the soil. The limit is set per zone.",
+            "mower_conflict": "Watering this zone today keeps the mower in, for zones on the mowed lawn."
           }
         },
         "reconfigure": {
@@ -106,10 +116,12 @@
             "name": "Name",
             "valves": "Valves",
             "roofed": "Under a roof",
-            "soil_sensor": "Soil moisture of this zone"
+            "soil_sensor": "Soil moisture of this zone",
+            "mower_conflict": "Blocks mowing"
           },
           "data_description": {
-            "soil_sensor": "Optional, sensor or input number in %. A zone without one does not look at the soil. The limit is set per zone."
+            "soil_sensor": "Optional, sensor or input number in %. A zone without one does not look at the soil. The limit is set per zone.",
+            "mower_conflict": "Watering this zone today keeps the mower in, for zones on the mowed lawn."
           }
         }
       }
@@ -135,6 +147,9 @@
       },
       "problem": {
         "name": "Problem"
+      },
+      "raining": {
+        "name": "Raining"
       }
     },
     "button": {
@@ -146,6 +161,9 @@
       },
       "zone_run": {
         "name": "Water now"
+      },
+      "mow_now": {
+        "name": "Mow now"
       }
     },
     "date": {
@@ -174,6 +192,15 @@
       },
       "frost_min": {
         "name": "Frost limit"
+      },
+      "mower_offset": {
+        "name": "Mower start offset"
+      },
+      "dry_hours": {
+        "name": "Dry hours after rain"
+      },
+      "rain_ahead_hours": {
+        "name": "Rain ahead hours"
       }
     },
     "select": {
@@ -218,6 +245,49 @@
           "11": "November",
           "12": "December"
         }
+      },
+      "mower_start_mode": {
+        "name": "Mower start",
+        "state": {
+          "sunrise": "From sunrise",
+          "sunset": "From sunset",
+          "at_time": "At a fixed time",
+          "off": "Off"
+        }
+      },
+      "mower_season_start": {
+        "name": "Mowing season starts",
+        "state": {
+          "1": "January",
+          "2": "February",
+          "3": "March",
+          "4": "April",
+          "5": "May",
+          "6": "June",
+          "7": "July",
+          "8": "August",
+          "9": "September",
+          "10": "October",
+          "11": "November",
+          "12": "December"
+        }
+      },
+      "mower_season_end": {
+        "name": "Mowing season ends",
+        "state": {
+          "1": "January",
+          "2": "February",
+          "3": "March",
+          "4": "April",
+          "5": "May",
+          "6": "June",
+          "7": "July",
+          "8": "August",
+          "9": "September",
+          "10": "October",
+          "11": "November",
+          "12": "December"
+        }
       }
     },
     "sensor": {
@@ -247,6 +317,28 @@
       },
       "zone_next_start": {
         "name": "Next start"
+      },
+      "hours_since_rain": {
+        "name": "Hours since rain"
+      },
+      "hours_to_rain": {
+        "name": "Hours to rain"
+      },
+      "next_mowing": {
+        "name": "Next mowing"
+      },
+      "mowing": {
+        "name": "Mowing",
+        "state": {
+          "mowing": "Mowing",
+          "ready": "Ready",
+          "frost": "Held, frost",
+          "watering": "Held, watering",
+          "watered": "Held, watered today",
+          "raining": "Held, raining",
+          "rained": "Held, rained recently",
+          "rain_ahead": "Held, rain ahead"
+        }
       }
     },
     "switch": {
@@ -255,11 +347,17 @@
       },
       "automatic": {
         "name": "Automatic watering"
+      },
+      "automatic_mowing": {
+        "name": "Automatic mowing"
       }
     },
     "time": {
       "zone_start_time": {
         "name": "Start time"
+      },
+      "mower_start_time": {
+        "name": "Mower start time"
       }
     }
   },
@@ -287,6 +385,10 @@
     "flow_high": {
       "title": "{name}: flow too high",
       "description": "{flow_high} was closed: its mean flow was above the limit set for it. Check for a broken pipe or sprinkler. The issue clears once the valve runs within its limit."
+    },
+    "mower_not_back": {
+      "title": "{name}: mower not back",
+      "description": "{mower} has not come back to its dock within 4 hours of the start. Check that it is not stuck. The issue clears once it is docked."
     }
   }
 }

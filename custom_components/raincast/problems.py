@@ -25,6 +25,7 @@ SEVERITY: dict[Fault, ir.IssueSeverity] = {
     Fault.NO_FLOW: ir.IssueSeverity.ERROR,
     Fault.FLOW_HIGH: ir.IssueSeverity.CRITICAL,
     Fault.WEATHER_LOST: ir.IssueSeverity.WARNING,
+    Fault.MOWER_NOT_BACK: ir.IssueSeverity.ERROR,
 }
 
 TITLES: dict[Fault, str] = {
@@ -34,6 +35,7 @@ TITLES: dict[Fault, str] = {
     Fault.NO_FLOW: "no water through the valve",
     Fault.FLOW_HIGH: "flow too high",
     Fault.WEATHER_LOST: "weather data lost",
+    Fault.MOWER_NOT_BACK: "mower not back",
 }
 
 MESSAGES: dict[Fault, str] = {
@@ -52,6 +54,9 @@ MESSAGES: dict[Fault, str] = {
     ),
     Fault.FLOW_HIGH: (
         "{flow_high} was closed: its flow was above the limit set for it. Check for a broken pipe or sprinkler."
+    ),
+    Fault.MOWER_NOT_BACK: (
+        "{mower} has not come back to its dock within 4 hours of the start. Check that it is not stuck."
     ),
     Fault.WEATHER_LOST: (
         "{weather} has had no value for an hour. Watering goes on without the holds it gives until it returns."

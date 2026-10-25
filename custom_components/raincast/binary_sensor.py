@@ -1,4 +1,4 @@
-"""Run in progress and problems."""
+"""Run in progress, problems and rain falling now."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import RainCastConfigEntry
+from .const import CONF_WEATHER
 from .entity import RainCastEntity
 
 
@@ -18,7 +19,10 @@ async def async_setup_entry(
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     coordinator = entry.runtime_data
-    async_add_entities([RunningSensor(coordinator, "running"), ProblemSensor(coordinator, "problem")])
+    sensors: list[BinarySensorEntity] = [RunningSensor(coordinator, "running"), ProblemSensor(coordinator, "problem")]
+    if entry.data.get(CONF_WEATHER):
+        sensors.append(RainingSensor(coordinator, "raining"))
+    async_add_entities(sensors)
 
 
 class RunningSensor(RainCastEntity, BinarySensorEntity):
@@ -57,3 +61,13 @@ class ProblemSensor(RainCastEntity, BinarySensorEntity):
     @property
     def extra_state_attributes(self) -> dict[str, list[str]]:
         return {"problems": sorted(str(fault) for fault in self.coordinator.faults.active)}
+
+
+class RainingSensor(RainCastEntity, BinarySensorEntity):
+    """On while the weather entity reports rain."""
+
+    _attr_device_class = BinarySensorDeviceClass.MOISTURE
+
+    @property
+    def is_on(self) -> bool | None:
+        return self.coordinator.mowing.raining
