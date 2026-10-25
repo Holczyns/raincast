@@ -7,6 +7,8 @@ export interface ZoneInfo {
   roofed: boolean;
   /** The zone's soil sensor; null when the zone does not look at the soil. */
   soil_sensor: string | null;
+  /** Watering this zone today keeps the mower in. */
+  mower_conflict: boolean;
   entities: Record<string, string>;
 }
 
@@ -15,6 +17,7 @@ export interface ZoneFields {
   valves: string[];
   roofed: boolean;
   soil_sensor: string | null;
+  mower_conflict: boolean;
 }
 
 export interface ValveResult {

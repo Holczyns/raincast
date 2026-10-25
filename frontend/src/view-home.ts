@@ -80,7 +80,9 @@ export class RainCastHome extends LitElement {
   render() {
     return html`
       <div class="layout">
-        <div class="column">${this.renderStatus()} ${this.renderWeather()} ${this.renderProblems()}</div>
+        <div class="column">
+          ${this.renderStatus()} ${this.renderMower()} ${this.renderWeather()} ${this.renderProblems()}
+        </div>
         <div class="zones">${this.entry.zones.map((zone) => this.renderZone(zone))}</div>
       </div>
     `;
@@ -184,7 +186,64 @@ export class RainCastHome extends LitElement {
         <h2><ha-icon icon="mdi:weather-partly-rainy"></ha-icon>${t("home.weather")}</h2>
         ${this.renderGauge(t("home.rain"), s.rain_sensor, e.rain_max, "mm")}
         ${s.outdoor_sensor ? this.renderGauge(t("home.outdoor"), s.outdoor_sensor, e.frost_min, "°C", true) : nothing}
+        ${s.weather ? this.renderRain() : nothing}
         <p class="muted small">${t("home.weather_hint")}</p>
+      </section>
+    `;
+  }
+
+  /** Rain now, since the last rain and until the next one, from the weather entity. */
+  private renderRain(): TemplateResult {
+    const t = this.localize;
+    const e = this.entry.entities;
+    const raining = isOn(this.hass, e.raining);
+    const since = numberState(this.hass, e.hours_since_rain);
+    const ahead = numberState(this.hass, e.hours_to_rain);
+    return html`
+      <div class="gauge">
+        <span>${t("home.rain_now")}</span>
+        <span class=${raining ? "warn-text" : ""}>${t(raining ? "home.raining" : "home.dry")}</span>
+      </div>
+      <div class="gauge">
+        <span>${t("home.last_rain")}</span>
+        <span>${since === undefined ? "–" : t("home.hours_ago", { hours: formatNumber(since, 1) })}</span>
+      </div>
+      <div class="gauge">
+        <span>${t("home.next_rain")}</span>
+        <span>${ahead === undefined ? t("home.no_rain_ahead") : t("home.in_hours", { hours: formatNumber(ahead, 1) })}</span>
+      </div>
+    `;
+  }
+
+  /** The mower: what keeps it in right now, its next start, and a forced start. */
+  private renderMower(): TemplateResult | typeof nothing {
+    const t = this.localize;
+    const e = this.entry.entities;
+    const mower = this.entry.sources.mower;
+    if (!mower || !e.mowing) return nothing;
+    const status = this.hass.states[e.mowing]?.state ?? "unknown";
+    const next = this.hass.states[e.next_mowing]?.state;
+    const date = next && !["unknown", "unavailable"].includes(next) ? new Date(next) : undefined;
+    const automatic = isOn(this.hass, e.automatic_mowing);
+    const chip = status === "mowing" ? "water" : status === "ready" ? "ok" : "warn";
+    return html`
+      <section class="card ${status === "mowing" ? "active" : ""}">
+        <h2>
+          <ha-icon icon="mdi:robot-mower-outline"></ha-icon>
+          <span class="grow">${t("home.mower")}</span>
+          <span class="chip ${chip}">${t(`mow.${status}` as TranslationKey)}</span>
+        </h2>
+        <dl>
+          <dt>${t("home.mower_state")}</dt>
+          <dd>${this.hass.states[mower]?.state ?? "–"}</dd>
+          <dt>${t("home.next_mowing")}</dt>
+          <dd>${!automatic ? t("home.automatic_off") : date ? `${dayLabel(date)}, ${timeLabel(date)}` : "–"}</dd>
+        </dl>
+        <div class="actions">
+          <button class="text primary" ?disabled=${status === "mowing"} @click=${() => this.press(e.mow_now)}>
+            <ha-icon icon="mdi:play"></ha-icon> ${t("home.mow_now")}
+          </button>
+        </div>
       </section>
     `;
   }

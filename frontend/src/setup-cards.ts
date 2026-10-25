@@ -29,9 +29,11 @@ const SOURCE_GROUPS: { title: TranslationKey; fields: SourceField[] }[] = [
     fields: [
       { key: "rain_sensor", label: "src.rain_sensor", domains: ["sensor", "input_number"] },
       { key: "outdoor_sensor", label: "src.outdoor_sensor", domains: ["sensor"], deviceClass: "temperature" },
+      { key: "weather", label: "src.weather_entity", domains: ["weather"] },
     ],
   },
   { title: "src.water", fields: [{ key: "water_meter", label: "src.water_meter", domains: ["sensor"], deviceClass: "water" }] },
+  { title: "src.mower_group", fields: [{ key: "mower", label: "src.mower", domains: ["lawn_mower"] }] },
 ];
 const SOURCE_FIELDS = SOURCE_GROUPS.flatMap((group) => group.fields);
 const VALVE_DOMAINS = ["valve", "switch", "input_boolean"];
@@ -269,6 +271,7 @@ export class RainCastZonesCard extends LitElement {
       name: zone?.name ?? "",
       valves: [...(zone?.valves ?? [])],
       roofed: zone?.roofed ?? false,
+      mower_conflict: zone?.mower_conflict ?? false,
       soil_sensor: zone?.soil_sensor ?? null,
     };
     this.confirmRemove = false;
@@ -327,6 +330,7 @@ export class RainCastZonesCard extends LitElement {
           <ha-icon icon=${zone.roofed ? "mdi:greenhouse" : "mdi:sprinkler"}></ha-icon>
           <div class="grow">
             ${zone.name}${zone.roofed ? html` <span class="muted small">· ${t("zone.roofed")}</span>` : nothing}
+            ${zone.mower_conflict ? html` <span class="muted small">· ${t("zone.mower_conflict")}</span>` : nothing}
           </div>
           <button class="text icon" title=${t("action.edit")} @click=${() => this.startEdit(zone)}>
             <ha-icon icon="mdi:pencil"></ha-icon>
@@ -423,6 +427,15 @@ export class RainCastZonesCard extends LitElement {
             @change=${(event: Event) => (this.draft = { ...draft, roofed: (event.target as HTMLInputElement).checked })}
           />
           <span>${t("zone.roofed")}<br /><span class="muted small">${t("zone.roofed_hint")}</span></span>
+        </label>
+        <label class="check">
+          <input
+            type="checkbox"
+            .checked=${draft.mower_conflict}
+            @change=${(event: Event) =>
+              (this.draft = { ...draft, mower_conflict: (event.target as HTMLInputElement).checked })}
+          />
+          <span>${t("zone.mower_conflict")}<br /><span class="muted small">${t("zone.mower_conflict_hint")}</span></span>
         </label>
         <div class="field">
           <label>${t("zone.soil_sensor")}</label>

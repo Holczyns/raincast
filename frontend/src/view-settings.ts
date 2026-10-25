@@ -6,6 +6,7 @@ import { controlStyles, numberControl } from "./number-control";
 import "./setup-cards";
 import { shared } from "./styles";
 
+const MOWER_MODES = ["sunrise", "sunset", "at_time", "off"];
 const MONTHS = Array.from({ length: 12 }, (_value, index) =>
   new Date(2026, index, 1).toLocaleDateString(LANGUAGE, { month: "long" }),
 );
@@ -31,7 +32,7 @@ export class RainCastSettings extends LitElement {
     }
     return html`
       <div class="layout">
-        <div class="column">${this.renderControl()} ${this.renderSeason()}</div>
+        <div class="column">${this.renderControl()} ${this.renderSeason()} ${this.renderMower()}</div>
         <div class="column">
           <raincast-zones-card
             .hass=${this.hass}
@@ -101,10 +102,9 @@ export class RainCastSettings extends LitElement {
     `;
   }
 
-  private renderSeason(): TemplateResult {
+  private month(entityId: string, label: TranslationKey): TemplateResult {
     const t = this.localize;
-    const e = this.entry.entities;
-    const month = (entityId: string, label: TranslationKey) => html`
+    return html`
       <div class="number">
         <span class="label">${t(label)}</span>
         <select
@@ -124,14 +124,72 @@ export class RainCastSettings extends LitElement {
         </select>
       </div>
     `;
+  }
+
+  private renderSeason(): TemplateResult {
+    const t = this.localize;
+    const e = this.entry.entities;
     return html`
       <section class="card">
         <h2>${t("settings.season")}</h2>
-        ${month(e.season_start, "settings.season_start")} ${month(e.season_end, "settings.season_end")}
+        ${this.month(e.season_start, "settings.season_start")} ${this.month(e.season_end, "settings.season_end")}
         <p class="muted small">${t("settings.season_hint")}</p>
         ${numberControl(this.hass, e.rain_max, t("settings.rain_max"))}
         ${numberControl(this.hass, e.frost_min, t("settings.frost_min"))}
         <p class="muted small">${t("settings.limits_hint")}</p>
+      </section>
+    `;
+  }
+
+  private renderMower(): TemplateResult | typeof nothing {
+    const t = this.localize;
+    const e = this.entry.entities;
+    if (!e.automatic_mowing) return nothing;
+    const mode = this.hass.states[e.mower_start_mode]?.state;
+    const startTime = this.hass.states[e.mower_start_time]?.state ?? "";
+    return html`
+      <section class="card">
+        <h2>${t("settings.mower")}</h2>
+        ${this.renderToggle("settings.automatic_mowing", "settings.automatic_mowing_hint", isOn(this.hass, e.automatic_mowing), (on) =>
+          this.hass.callService("switch", on ? "turn_on" : "turn_off", { entity_id: e.automatic_mowing }),
+        )}
+        <div class="number">
+          <span class="label">${t("settings.mower_start")}</span>
+          <select
+            class="month"
+            @change=${(event: Event) =>
+              this.hass.callService("select", "select_option", {
+                entity_id: e.mower_start_mode,
+                option: (event.target as HTMLSelectElement).value,
+              })}
+          >
+            ${MOWER_MODES.map(
+              (option) =>
+                html`<option value=${option} ?selected=${option === mode}>${t(`mowmode.${option}` as TranslationKey)}</option>`,
+            )}
+          </select>
+        </div>
+        ${mode === "sunrise" || mode === "sunset" ? numberControl(this.hass, e.mower_offset, t("settings.mower_offset")) : nothing}
+        ${mode === "at_time"
+          ? html`<div class="number">
+              <span class="label">${t("zone.start_time")}</span>
+              <input
+                class="text"
+                type="time"
+                .value=${startTime.slice(0, 5)}
+                @change=${(event: Event) =>
+                  this.hass.callService("time", "set_value", {
+                    entity_id: e.mower_start_time,
+                    time: `${(event.target as HTMLInputElement).value}:00`,
+                  })}
+              />
+            </div>`
+          : nothing}
+        ${this.month(e.mower_season_start, "settings.mower_season_start")}
+        ${this.month(e.mower_season_end, "settings.mower_season_end")}
+        ${numberControl(this.hass, e.dry_hours, t("settings.dry_hours"))}
+        ${numberControl(this.hass, e.rain_ahead_hours, t("settings.rain_ahead_hours"))}
+        <p class="muted small">${t("settings.mower_hint")}</p>
       </section>
     `;
   }

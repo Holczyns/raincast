@@ -81,6 +81,31 @@ const SECTIONS: Section[] = [
     `,
   },
   {
+    icon: "mdi:robot-mower-outline",
+    title: "Mower",
+    body: html`
+      <p>
+        With a lawn mower set, RainCast sends it out at its own start: at a fixed time, or a number of hours after (or
+        before) sunrise or sunset, in its own season. October usually still needs mowing when watering no longer does.
+      </p>
+      <p>The mower stays in, with a notification saying why, when:</p>
+      <ul>
+        <li>a zone marked <i>Blocks mowing</i> was watered today or is being watered: wet grass sticks to the blades;</li>
+        <li>it rains, it rained within the <i>dry hours after rain</i>, or rain is due within the <i>rain ahead hours</i>;</li>
+        <li>it freezes.</li>
+      </ul>
+      <p>
+        A zone that is not on the mowed lawn, such as a greenhouse, leaves <i>Blocks mowing</i> off and never keeps the
+        mower in. <b>Mow now</b> sends the mower out regardless. A mower not back in its dock within 4 hours is reported
+        as a problem.
+      </p>
+      <p>
+        Rain comes from the weather entity: rain now from its condition, the last rain remembered by RainCast, the next
+        rain from its hourly forecast. Automatic mowing starts off; turn it on once no other schedule starts the mower.
+      </p>
+    `,
+  },
+  {
     icon: "mdi:weather-partly-rainy",
     title: "Weather inputs",
     body: html`
@@ -93,6 +118,7 @@ const SECTIONS: Section[] = [
         </li>
         <li><b>Rain forecast</b> in mm for the coming day, for zones open to the sky.</li>
         <li><b>Outdoor temperature</b> for the frost hold.</li>
+        <li><b>Weather forecast</b>, a weather entity with an hourly forecast, for rain now, behind and ahead, used by the mower.</li>
       </ul>
       <p>
         Without an input, zones are watered by their intervals alone. When a configured input has no value, RainCast waters

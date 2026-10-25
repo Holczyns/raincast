@@ -33,8 +33,12 @@ B-hyve, relays on ESPHome or Shelly devices, and smart plugs alike.
   one does not look at the soil.
 - **Rain and frost holds**: a rain forecast sensor for zones open to the sky and an outdoor temperature sensor that
   stops all watering below the frost limit. All inputs are optional.
-- **Season and main switch**: automatic watering only between two months, for example April to October, and a main
+- **Season and main switch**: automatic watering only between two months, for example April to September, and a main
   switch for all daily starts. Manual runs work regardless.
+- **Mower** (optional): any `lawn_mower` entity goes out at its own start, from sunrise, sunset or a fixed time, in its
+  own season. It stays in when a zone that blocks mowing was watered today, while it rains, for some hours after rain,
+  when rain is due, and in frost; *Mow now* sends it out regardless. Rain now, the last rain and the next rain come from
+  a weather entity with an hourly forecast.
 - **Dry run** by default. RainCast sends the day's plan as a notification but opens no valve until valve control is
   switched on, so it can be compared with the current setup first.
 - **Measured watering**: a zone counts as watered only when its valves reported open for at least 90 % of the
@@ -55,7 +59,7 @@ B-hyve, relays on ESPHome or Shelly devices, and smart plugs alike.
 - Home Assistant 2026.10 or newer.
 - Valves as `valve`, `switch` or `input_boolean` entities.
 - Optional: a soil moisture sensor in % per zone, a rain forecast sensor in mm for the coming day, an outdoor temperature
-  sensor, a total water meter in m³ or L, a notify service.
+  sensor, a weather entity with an hourly forecast, a total water meter in m³ or L, a lawn mower, a notify service.
 
 Any sensor works for the weather inputs. Open-Meteo provides both as a model value without hardware, for example
 through a [RESTful sensor](https://www.home-assistant.io/integrations/rest/) reading `soil_moisture_3_to_9cm` and
@@ -80,10 +84,10 @@ restart Home Assistant.
 The wizard asks for:
 
 1. **A name** for the controller.
-2. **Weather and water**: rain forecast, outdoor temperature and water meter. All optional; everything can be changed
-   later in the panel.
-3. **Zones**: a name, the valves in the order they run, *under a roof*, a soil sensor, the interval and a starting
-   time per valve. Add as many as you need.
+2. **Weather, water and mower**: rain forecast, outdoor temperature, weather entity, water meter and lawn mower. All
+   optional; everything can be changed later in the panel.
+3. **Zones**: a name, the valves in the order they run, *under a roof*, *blocks mowing*, a soil sensor, the interval
+   and a starting time per valve. Add as many as you need.
 
 Afterwards open **RainCast** in the sidebar. In **Settings** you set the season, the rain and frost limits, and for
 each zone its start, soil limit, interval and the time and flow limit of each valve; you also add, edit or remove
@@ -140,6 +144,10 @@ Controller device:
 | Next start, Planned time (sensor) | The coming start and the minutes due now |
 | Watering, Problem (binary sensor) | Run in progress; faults with the list as an attribute |
 | Water due zones, Stop watering (button) | Manual run and stop |
+| Raining (binary sensor), Hours since rain, Hours to rain (sensor) | Rain from the weather entity |
+| Automatic mowing (switch), Mower start (select), Mower start time (time), Mower start offset (number) | The mower's start |
+| Mowing season starts, Mowing season ends (select), Dry hours after rain, Rain ahead hours (number) | Mower season and rain holds |
+| Mowing, Next mowing (sensor), Mow now (button) | What keeps the mower in, its next start, a forced start |
 
 Each zone device:
 
